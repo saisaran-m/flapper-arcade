@@ -1,0 +1,99 @@
+name: Build and Deploy (Web & Android)
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # --- 1. SET UP PYTHON & PYGBAG ---
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Pygbag and Pygame
+        run: |
+          python -m pip install --upgrade pip
+          pip install pygame pygbag
+
+      - name: Build Web Game with Pygbag
+        run: |
+          # Pygbag compiles main.py and packs assets into build/web/
+          python -m pygbag --build main.py
+
+      # --- 2. DEPLOY TO GITHUB PAGES ---
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build/web
+          branch: gh-pages
+          clean: true
+
+      # --- 3. SET UP JAVA & NODE FOR ANDROID BUILD ---
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # --- 4. BUILD ANDROID APK WITH CAPACITOR ---
+      - name: Initialize and Build Android App
+        run: |
+          # Create package.json and install Capacitor dependencies
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          
+          # Initialize Capacitor with the Pygbag build directory
+          npx cap init "Forest Flapper Arcade" "com.saisaran.flapperarcade" --web-dir=build/web
+          
+          # Add the Android platform
+          npx cap add android
+          
+          # Sync web files into the Android project
+          npx cap sync
+          
+          # Make gradlew executable
+          chmod +x android/gradlew
+          
+          # Build the debug APK
+          cd android
+          ./gradlew assembleDebug
+
+      # --- 5. UPLOAD APK AS ARTIFACT ---
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Forest-Flapper-Arcade-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      # --- 6. CREATE LATEST RELEASE ---
+      - name: Create or Update Latest Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          tag_name: latest
+          name: "Latest Android Build"
+          body: "This release contains the latest Android APK for Forest Flapper Arcade. Download the APK file below to install on your phone!"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
