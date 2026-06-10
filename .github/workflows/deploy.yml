@@ -31,7 +31,7 @@ jobs:
       - name: Build Web Game with Pygbag
         run: |
           # Pygbag compiles main.py and packs assets into build/web/
-          python -m pygbag --build main.py
+          python -m pygbag --build --disable-sound-format-error main.py
 
       # --- 2. DEPLOY TO GITHUB PAGES ---
       - name: Deploy to GitHub Pages
