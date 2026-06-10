@@ -22,3 +22,11 @@ ghost_*.json
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Pygbag & Capacitor local build artifacts
+build/
+node_modules/
+package.json
+package-lock.json
+android/
+capacitor.config.json

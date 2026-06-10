@@ -4,6 +4,7 @@ import math
 import sys
 import os
 import json
+import asyncio
 
 # Initialize pygame
 pygame.init()
@@ -2832,7 +2833,7 @@ class Game:
         helper_surf = font_small.render("Keyboard: Press SPACE to Play Again", True, (160, 160, 160))
         surface.blit(helper_surf, (WIDTH // 2 - helper_surf.get_width() // 2, card_y + card_h + 80))
 
-def main():
+async def main():
     game = Game()
     play_ambient(game.volume_level * 0.85, game.get_ambient_track())
     
@@ -2841,6 +2842,7 @@ def main():
         game.update()
         game.draw()
         clock.tick(FPS)
+        await asyncio.sleep(0)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
