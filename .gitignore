@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# User data (don't commit personal saves)
+username.txt
+leaderboard.json
+highscore.txt
+equipped_skin.txt
+profile_*.json
+ghost_*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
