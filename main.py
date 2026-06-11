@@ -2939,6 +2939,58 @@ class Game:
         surface.blit(helper_surf, (WIDTH // 2 - helper_surf.get_width() // 2, card_y + card_h + 80))
 
 async def main():
+    if sys.platform == "emscripten":
+        import platform
+        try:
+            platform.window.eval("""
+                // 1. Inject styling to force canvas to fill the viewport
+                var style = document.createElement('style');
+                style.innerHTML = `
+                    html, body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        overflow: hidden !important;
+                        background-color: #0b0c10 !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                    }
+                    #canvas {
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        display: block !important;
+                        image-rendering: auto !important;
+                    }
+                `;
+                document.head.appendChild(style);
+
+                // 2. High-DPI Auto-Resizer for SDL2 Canvas
+                function syncCanvasSize() {
+                    var canvas = document.getElementById('canvas');
+                    if (canvas) {
+                        var rect = canvas.getBoundingClientRect();
+                        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+                        var targetW = Math.floor(rect.width * dpr);
+                        var targetH = Math.floor(rect.height * dpr);
+                        if (canvas.width !== targetW || canvas.height !== targetH) {
+                            canvas.width = targetW;
+                            canvas.height = targetH;
+                            // Dispatch a window resize event to force Pygame/SDL2 to detect it
+                            window.dispatchEvent(new Event('resize'));
+                        }
+                    }
+                }
+
+                // Run periodically to catch size shifts and orientation changes
+                setInterval(syncCanvasSize, 300);
+                window.addEventListener('resize', syncCanvasSize);
+                syncCanvasSize();
+            """)
+        except Exception as e:
+            print("Failed to inject fullscreen style:", e)
+
     game = Game()
     play_ambient(game.volume_level * 0.85, game.get_ambient_track())
     
