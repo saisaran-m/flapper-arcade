@@ -48,8 +48,8 @@ A beautifully crafted Flappy Bird-style arcade game built entirely in Python wit
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/forest-flapper-arcade.git
-cd forest-flapper-arcade
+git clone https://github.com/saisaran-m/flapper-arcade.git
+cd flapper-arcade
 
 # Install dependencies
 pip install pygame
@@ -73,7 +73,7 @@ python main.py
 ## 📁 Project Structure
 
 ```
-forest-flapper-arcade/
+flapper-arcade/
 ├── main.py              # Main game (all rendering, physics, UI)
 ├── generate_sounds.py   # Procedural sound synthesizer
 ├── assets/
