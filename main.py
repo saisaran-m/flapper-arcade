@@ -25,7 +25,10 @@ SKY_PHASE_LEN = 3600  # 60 seconds per phase (Day, Sunset, Night, Sunrise)
 # Actual Window Dimensions (Starts at default, but is RESIZABLE)
 window_w = WIDTH
 window_h = HEIGHT
-screen = pygame.display.set_mode((window_w, window_h), pygame.RESIZABLE)
+if sys.platform == "emscripten":
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+else:
+    screen = pygame.display.set_mode((window_w, window_h), pygame.RESIZABLE)
 pygame.display.set_caption("Forest Flapper Arcade")
 clock = pygame.time.Clock()
 
@@ -1359,6 +1362,7 @@ class Game:
     def __init__(self):
         self.state = "START"  # START, PLAYING, GAMEOVER, LOGIN
         self.mode = "normal"  # normal, night, city, winter
+        self.last_click = None
         
         self.username = load_username()
         self.leaderboard = load_leaderboard()
@@ -1653,7 +1657,7 @@ class Game:
                 pygame.quit()
                 sys.exit()
                 
-            if event.type == pygame.VIDEORESIZE:
+            if event.type == pygame.VIDEORESIZE and sys.platform != "emscripten":
                 window_w, window_h = event.w, event.h
                 screen = pygame.display.set_mode((window_w, window_h), pygame.RESIZABLE)
                 
@@ -1683,16 +1687,21 @@ class Game:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left click
                     mx, my = event.pos
-                    # Map to virtual coords dynamically using actual current window size
-                    scr_w, scr_h = screen.get_size()
-                    cur_scale = min(scr_w / WIDTH, scr_h / HEIGHT)
-                    cur_dx = (scr_w - WIDTH * cur_scale) // 2
-                    cur_dy = (scr_h - HEIGHT * cur_scale) // 2
-                    if cur_scale > 0:
-                        vmx = (mx - cur_dx) / cur_scale
-                        vmy = (my - cur_dy) / cur_scale
-                    else:
+                    if sys.platform == "emscripten":
                         vmx, vmy = mx, my
+                    else:
+                        # Map to virtual coords dynamically using actual current window size
+                        scr_w, scr_h = screen.get_size()
+                        cur_scale = min(scr_w / WIDTH, scr_h / HEIGHT)
+                        cur_dx = (scr_w - WIDTH * cur_scale) // 2
+                        cur_dy = (scr_h - HEIGHT * cur_scale) // 2
+                        if cur_scale > 0:
+                            vmx = (mx - cur_dx) / cur_scale
+                            vmy = (my - cur_dy) / cur_scale
+                        else:
+                            vmx, vmy = mx, my
+                    
+                    self.last_click = (vmx, vmy, pygame.time.get_ticks())
                         
                     # Handle HUD click overrides first
                     if self.state == "START":
@@ -2299,25 +2308,37 @@ class Game:
                 flash_surf.set_alpha(180)
             draw_surf.blit(flash_surf, (0, 0))
             
-        # 10. Letterbox Scale virtual screen onto actual window resizes
-        scale = min(window_w / WIDTH, window_h / HEIGHT)
-        scaled_w = int(WIDTH * scale)
-        scaled_h = int(HEIGHT * scale)
-        dx = (window_w - scaled_w) // 2
-        dy = (window_h - scaled_h) // 2
-        
-        # Apply screenshake
-        shake_x = dx
-        shake_y = dy
-        if self.shake_timer > 0:
-            shake_x += random.randint(-4, 4)
-            shake_y += random.randint(-4, 4)
+        # Draw debug click dot
+        if getattr(self, "last_click", None) is not None:
+            vx, vy, t = self.last_click
+            if pygame.time.get_ticks() - t < 2000: # show for 2 seconds
+                pygame.draw.circle(draw_surf, (255, 0, 0), (int(vx), int(vy)), 8)
+                pygame.draw.line(draw_surf, (255, 255, 255), (int(vx) - 15, int(vy)), (int(vx) + 15, int(vy)), 2)
+                pygame.draw.line(draw_surf, (255, 255, 255), (int(vx), int(vy) - 15), (int(vx), int(vy) + 15), 2)
             
-        scaled_surf = pygame.transform.smoothscale(draw_surf, (scaled_w, scaled_h))
-        
-        screen.fill((0, 0, 0))
-        screen.blit(scaled_surf, (shake_x, shake_y))
-        pygame.display.flip()
+        if sys.platform == "emscripten":
+            screen.blit(draw_surf, (0, 0))
+            pygame.display.flip()
+        else:
+            # 10. Letterbox Scale virtual screen onto actual window resizes
+            scale = min(window_w / WIDTH, window_h / HEIGHT)
+            scaled_w = int(WIDTH * scale)
+            scaled_h = int(HEIGHT * scale)
+            dx = (window_w - scaled_w) // 2
+            dy = (window_h - scaled_h) // 2
+            
+            # Apply screenshake
+            shake_x = dx
+            shake_y = dy
+            if self.shake_timer > 0:
+                shake_x += random.randint(-4, 4)
+                shake_y += random.randint(-4, 4)
+                
+            scaled_surf = pygame.transform.smoothscale(draw_surf, (scaled_w, scaled_h))
+            
+            screen.fill((0, 0, 0))
+            screen.blit(scaled_surf, (shake_x, shake_y))
+            pygame.display.flip()
 
     def draw_celestial(self, surface):
         if self.mode == "night":
@@ -2948,56 +2969,7 @@ class Game:
 
 async def main():
     if sys.platform == "emscripten":
-        import platform
-        try:
-            platform.window.eval("""
-                // 1. Inject styling to force canvas to fill the viewport
-                var style = document.createElement('style');
-                style.innerHTML = `
-                    html, body {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        width: 100% !important;
-                        height: 100% !important;
-                        overflow: hidden !important;
-                        background-color: #0b0c10 !important;
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                    }
-                    #canvas {
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        display: block !important;
-                        image-rendering: auto !important;
-                    }
-                `;
-                document.head.appendChild(style);
-
-                // 2. High-DPI Auto-Resizer for SDL2 Canvas
-                function syncCanvasSize() {
-                    var canvas = document.getElementById('canvas');
-                    if (canvas) {
-                        var rect = canvas.getBoundingClientRect();
-                        var dpr = Math.min(window.devicePixelRatio || 1, 2);
-                        var targetW = Math.floor(rect.width * dpr);
-                        var targetH = Math.floor(rect.height * dpr);
-                        if (canvas.width !== targetW || canvas.height !== targetH) {
-                            canvas.width = targetW;
-                            canvas.height = targetH;
-                            // Dispatch a window resize event to force Pygame/SDL2 to detect it
-                            window.dispatchEvent(new Event('resize'));
-                        }
-                    }
-                }
-
-                // Run periodically to catch size shifts and orientation changes
-                setInterval(syncCanvasSize, 300);
-                window.addEventListener('resize', syncCanvasSize);
-                syncCanvasSize();
-            """)
-        except Exception as e:
-            print("Failed to inject fullscreen style:", e)
+        pass
 
     game = Game()
     play_ambient(game.volume_level * 0.85, game.get_ambient_track())
