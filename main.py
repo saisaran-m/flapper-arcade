@@ -1409,6 +1409,7 @@ class Game:
         # Modals
         self.show_leaderboard = False
         self.show_skins_shop = False
+        self.show_about = False
         
         # Text input controller
         self.login_input = ""
@@ -1676,7 +1677,7 @@ class Game:
                             self.login_input += event.unicode
                             
                 elif event.key == pygame.K_SPACE:
-                    if not self.show_leaderboard and not self.show_skins_shop:
+                    if not self.show_leaderboard and not self.show_skins_shop and not self.show_about:
                         self.perform_action()
                         
             # Mouse / Touch Inputs (fully mobile responsive translate coordinates)
@@ -1692,6 +1693,16 @@ class Game:
                         
                     # Handle HUD click overrides first
                     if self.state == "START":
+                        if self.show_about:
+                            card_w = 360
+                            card_h = 320
+                            card_x = WIDTH // 2 - card_w // 2
+                            card_y = HEIGHT // 2 - card_h // 2 - 30
+                            close_btn = pygame.Rect(WIDTH // 2 - 60, card_y + card_h - 45, 120, 32)
+                            if close_btn.collidepoint(vmx, vmy):
+                                self.show_about = False
+                            return
+
                         if self.show_leaderboard:
                             # Close leaderboard modal check
                             close_btn = pygame.Rect(WIDTH // 2 - 60, HEIGHT // 2 - 120 + 240 - 45, 120, 32)
@@ -1743,6 +1754,12 @@ class Game:
                                         return
                             return
                             
+                        # About Click (top-right)
+                        about_btn = pygame.Rect(WIDTH - 115, 15, 100, 35)
+                        if about_btn.collidepoint(vmx, vmy):
+                            self.show_about = True
+                            return
+
                         # Profile Click (top bar)
                         prof_btn = pygame.Rect(15, 15, 160, 35)
                         if prof_btn.collidepoint(vmx, vmy):
@@ -2431,13 +2448,29 @@ class Game:
         overlay.fill((15, 15, 25, 90))
         surface.blit(overlay, (0, 0))
         
+        # Get theme color
+        theme_color = (46, 125, 50)
+        if self.mode == "night":
+            theme_color = (255, 0, 180)
+        elif self.mode == "city":
+            theme_color = (220, 95, 80)
+        elif self.mode == "winter":
+            theme_color = (140, 175, 205)
+
         # Profile Top Bar
         pygame.draw.rect(surface, (30, 30, 45, 200), (15, 15, 160, 35), 0, 6)
-        pygame.draw.rect(surface, (100, 210, 100), (15, 15, 160, 35), 1, 6)
+        pygame.draw.rect(surface, theme_color, (15, 15, 160, 35), 1, 6)
         name_lbl = font_bold_small.render(self.username, True, (255, 255, 255))
-        change_lbl = font_small.render("Change Profile", True, (100, 210, 100))
+        change_lbl = font_small.render("Change Profile", True, theme_color)
         surface.blit(name_lbl, (25, 22))
         surface.blit(change_lbl, (185, 23))
+        
+        # About Button (top-right)
+        about_btn = pygame.Rect(WIDTH - 115, 15, 100, 35)
+        pygame.draw.rect(surface, (30, 30, 45, 200), about_btn, 0, 6)
+        pygame.draw.rect(surface, theme_color, about_btn, 1, 6)
+        about_lbl = font_bold_small.render("About", True, (255, 255, 255))
+        surface.blit(about_lbl, (about_btn.centerx - about_lbl.get_width() // 2, about_btn.centery - about_lbl.get_height() // 2))
         
         # Title Card
         title_text = "FOREST FLAPPER"
@@ -2517,6 +2550,10 @@ class Game:
         if self.show_skins_shop:
             self.draw_skins_modal(surface)
 
+        # Show About Modal if active
+        if self.show_about:
+            self.draw_about_modal(surface)
+
     def draw_button(self, surface, rect, text, is_active, color):
         # Glow active button
         bg_color = (25, 25, 35, 220)
@@ -2577,6 +2614,75 @@ class Game:
         # Close Button
         close_btn = pygame.Rect(WIDTH // 2 - 60, card_y + card_h - 45, 120, 32)
         pygame.draw.rect(surface, (100, 210, 100), close_btn, 0, 6)
+        c_lbl = font_bold_small.render("Close", True, (20, 20, 30))
+        surface.blit(c_lbl, (close_btn.centerx - c_lbl.get_width() // 2, close_btn.centery - c_lbl.get_height() // 2))
+
+    def draw_about_modal(self, surface):
+        # Dark overlay
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((10, 10, 20, 220))
+        surface.blit(overlay, (0, 0))
+        
+        card_w = 360
+        card_h = 320
+        card_x = WIDTH // 2 - card_w // 2
+        card_y = HEIGHT // 2 - card_h // 2 - 30
+        
+        # Get theme color
+        theme_color = (46, 125, 50)
+        if self.mode == "night":
+            theme_color = (255, 0, 180)
+        elif self.mode == "city":
+            theme_color = (220, 95, 80)
+        elif self.mode == "winter":
+            theme_color = (140, 175, 205)
+            
+        pygame.draw.rect(surface, theme_color, (card_x - 3, card_y - 3, card_w + 6, card_h + 6), 0, 12)
+        pygame.draw.rect(surface, (20, 20, 30), (card_x, card_y, card_w, card_h), 0, 10)
+        
+        title = font_title.render("ABOUT GAME", True, theme_color)
+        surface.blit(title, (WIDTH // 2 - title.get_width() // 2, card_y + 15))
+        
+        # Info lines inside the modal
+        # 1. Developer
+        dev_lbl = font_bold_small.render("DEVELOPER:", True, (150, 150, 160))
+        dev_val = font_ui.render("SAISARAN", True, (255, 215, 0)) # Bold, beautiful gold
+        
+        # 2. Engine
+        eng_lbl = font_bold_small.render("BUILT WITH:", True, (150, 150, 160))
+        eng_val = font_bold_small.render("Pygame + WebAssembly", True, (255, 255, 255))
+        
+        # 3. Version
+        ver_lbl = font_bold_small.render("VERSION:", True, (150, 150, 160))
+        ver_val = font_bold_small.render("v1.2.0 (Stable)", True, (255, 255, 255))
+        
+        # 4. Platform
+        plat_lbl = font_bold_small.render("PLATFORM:", True, (150, 150, 160))
+        plat_val = font_bold_small.render("Web & Mobile (Android)", True, (255, 255, 255))
+
+        # Blit them nicely spaced
+        start_y = card_y + 75
+        spacing = 42
+        
+        # Line 1: Developer
+        surface.blit(dev_lbl, (card_x + 30, start_y))
+        surface.blit(dev_val, (card_x + 150, start_y - 4)) # Adjust slightly for larger font size
+        
+        # Line 2: Engine
+        surface.blit(eng_lbl, (card_x + 30, start_y + spacing))
+        surface.blit(eng_val, (card_x + 150, start_y + spacing))
+        
+        # Line 3: Version
+        surface.blit(ver_lbl, (card_x + 30, start_y + spacing * 2))
+        surface.blit(ver_val, (card_x + 150, start_y + spacing * 2))
+        
+        # Line 4: Platform
+        surface.blit(plat_lbl, (card_x + 30, start_y + spacing * 3))
+        surface.blit(plat_val, (card_x + 150, start_y + spacing * 3))
+        
+        # Close Button
+        close_btn = pygame.Rect(WIDTH // 2 - 60, card_y + card_h - 45, 120, 32)
+        pygame.draw.rect(surface, theme_color, close_btn, 0, 6)
         c_lbl = font_bold_small.render("Close", True, (20, 20, 30))
         surface.blit(c_lbl, (close_btn.centerx - c_lbl.get_width() // 2, close_btn.centery - c_lbl.get_height() // 2))
 
