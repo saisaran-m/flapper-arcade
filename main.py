@@ -341,38 +341,36 @@ class SnowParticle:
         surface.blit(s_surf, (int(self.x - self.size), int(self.y - self.size)))
 
 class RainParticle:
-    """Realistic rain drop — short vertical line falling mostly straight down."""
+    """Realistic rain drop — fast diagonal line representing slanted wind-driven rain."""
     def __init__(self, initial=False):
         self.reset(initial)
         
     def reset(self, initial=False):
-        self.x = random.uniform(0, WIDTH)
-        self.y = random.uniform(0, Y_GROUND) if initial else random.uniform(-80, -5)
+        # Since rain falls slanted to the left, spawn drops from X=0 to WIDTH+150 to sweep across the screen
+        self.x = random.uniform(0, WIDTH + 150)
+        self.y = random.uniform(0, Y_GROUND) if initial else random.uniform(-100, -10)
         
-        # Depth layer: 0=far (small, slow, dim), 1=mid, 2=near (large, fast, bright)
+        # Depth layers: 0=far (background, small, fast), 1=mid (playfield), 2=near (foreground, large, very fast)
         self.layer = random.choices([0, 1, 2], weights=[30, 45, 25])[0]
         
         if self.layer == 0:
-            # Far drops: tiny, slow
-            self.length = random.uniform(2, 4)
-            self.speed_y = random.uniform(5.0, 7.0)
-            self.speed_x = random.uniform(-0.3, -0.1)  # very slight wind
+            # Far background drops: thin, shorter, slightly slower
+            self.speed_y = random.uniform(15.0, 19.0)
+            self.speed_x = random.uniform(-3.5, -2.5)  # slanted wind
             self.thickness = 1
-            self.color = (140, 160, 180, 80)
+            self.color = (130, 145, 160)
         elif self.layer == 1:
-            # Mid drops
-            self.length = random.uniform(4, 6)
-            self.speed_y = random.uniform(8.0, 11.0)
-            self.speed_x = random.uniform(-0.6, -0.2)
+            # Mid playfield drops
+            self.speed_y = random.uniform(20.0, 25.0)
+            self.speed_x = random.uniform(-5.0, -3.5)
             self.thickness = 1
-            self.color = (160, 185, 210, 120)
+            self.color = (160, 180, 200)
         else:
-            # Near drops: larger, faster, brighter
-            self.length = random.uniform(5, 8)
-            self.speed_y = random.uniform(11.0, 15.0)
-            self.speed_x = random.uniform(-0.8, -0.3)
+            # Near foreground drops: thicker, longest, extremely fast
+            self.speed_y = random.uniform(26.0, 32.0)
+            self.speed_x = random.uniform(-6.5, -5.0)
             self.thickness = 2
-            self.color = (190, 210, 230, 180)
+            self.color = (190, 210, 230)
         
         self.splash_timer = 0
         self.splash_x = 0
@@ -395,34 +393,34 @@ class RainParticle:
             self.splash_x = self.x
             self.splash_y = Y_GROUND - 2
             self.splashing = True
-            self.splash_timer = 4  # brief splash animation
+            self.splash_timer = 5  # brief splash animation
             return
         
-        # Reset if off-screen horizontally
-        if self.x < -10 or self.x > WIDTH + 10:
+        # Reset if off-screen (slanted rain drifts left, so check left bound and bottom)
+        if self.x < -20 or self.x > WIDTH + 170:
             self.reset()
 
     def draw(self, surface):
         if self.splashing:
-            # Draw tiny splash ring at ground level
-            alpha = int((self.splash_timer / 4) * 140)
-            splash_r = 4 - self.splash_timer + 2
-            splash_color = (200, 215, 230)
-            # Tiny horizontal splash lines
+            # Draw tiny expanding splash ring and ripples at ground level
+            splash_r = 5 - self.splash_timer + 2
+            splash_color = (180, 200, 220)
             sx = int(self.splash_x)
             sy = int(self.splash_y)
-            pygame.draw.line(surface, splash_color, (sx - splash_r, sy), (sx - splash_r + 2, sy - 2), 1)
-            pygame.draw.line(surface, splash_color, (sx + splash_r, sy), (sx + splash_r - 2, sy - 2), 1)
-            pygame.draw.line(surface, splash_color, (sx, sy), (sx, sy - splash_r), 1)
+            
+            # Draw tiny expanding ripple ellipse
+            if splash_r > 0:
+                pygame.draw.ellipse(surface, splash_color, (sx - splash_r, sy - 1, splash_r * 2, 2), 1)
+            # Upward splash droplets
+            pygame.draw.line(surface, splash_color, (sx - splash_r // 2, sy), (sx - splash_r, sy - 3), 1)
+            pygame.draw.line(surface, splash_color, (sx + splash_r // 2, sy), (sx + splash_r, sy - 3), 1)
         else:
-            # Draw the raindrop as a short nearly-vertical line
+            # Draw raindrop as a line along its velocity vector (motion blur)
             x1 = int(self.x)
             y1 = int(self.y)
-            # End point: mostly straight down, tiny horizontal drift
-            x2 = int(self.x + self.speed_x * 0.3)
-            y2 = int(self.y + self.length)
-            color_rgb = self.color[:3]
-            pygame.draw.line(surface, color_rgb, (x1, y1), (x2, y2), self.thickness)
+            x2 = int(self.x + self.speed_x * 0.9)
+            y2 = int(self.y + self.speed_y * 0.9)
+            pygame.draw.line(surface, self.color, (x1, y1), (x2, y2), self.thickness)
 
 class Car:
     def __init__(self, y):
