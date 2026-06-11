@@ -22,9 +22,11 @@ A beautifully crafted Flappy Bird-style arcade game built entirely in Python wit
 - **Flying Obstacles** — Animated birds and bats that fly across the screen at higher difficulties
 - **Power-Ups** — Shield (absorbs one hit) and Slow-Mo (halves game speed for 5 seconds)
 - **Coin Economy** — Collect coins mid-flight to unlock premium bird skins
+- **Daily Rewards** — Claim +50 coins every 24 hours via the dashboard
+- **Virtual Keyboard** — Fully mobile-friendly on-screen QWERTY layout for profile edits
 
 ### 🐦 Unlockable Skins
-- Classic, Ninja, Mech, and Phoenix — each with unique particle trail effects
+- Classic, Ninja, Mech, Phoenix, **Sigma**, and **Skibidi Toilet** — each with unique particle trail effects and custom pixel art drawings
 
 ### 🔊 Procedural Audio
 - All sounds synthesized from pure math — no external audio files needed
@@ -32,6 +34,7 @@ A beautifully crafted Flappy Bird-style arcade game built entirely in Python wit
 - Mode-specific ambient soundscapes (forest wind, synthwave beats, city traffic, winter gale)
 
 ### 📊 Progression
+- **Achievements Menu** — Unlock badges (First Flight, Coin Collector, Insane Pilot, Skin Enthusiast) and view progress in a gold modal
 - Persistent player profiles with lifetime coin tracking
 - Local leaderboard with multiple player support
 - High score tracking per player
