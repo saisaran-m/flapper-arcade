@@ -29,7 +29,7 @@ if sys.platform == "emscripten":
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
 else:
     screen = pygame.display.set_mode((window_w, window_h), pygame.RESIZABLE)
-pygame.display.set_caption("Forest Flapper Arcade")
+pygame.display.set_caption("Flapper Arcade")
 clock = pygame.time.Clock()
 
 # Pre-rendered weather and celestial assets to eliminate dynamic allocations in the frame loop

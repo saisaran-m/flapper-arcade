@@ -1,4 +1,4 @@
-# 🐦 Forest Flapper Arcade
+# 🐦 Flapper Arcade
 
 A beautifully crafted Flappy Bird-style arcade game built entirely in Python with Pygame. Features stunning hand-drawn pixel art, 4 unique game modes, dynamic weather, a day-night cycle, and procedurally generated sound effects.
 
