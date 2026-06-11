@@ -925,8 +925,49 @@ def main():
     save_wav("assets/sounds/snowfall_ambient.wav", generate_snowfall_ambient())
     
     print("All sounds generated successfully!")
+    convert_to_ogg()
+
+def convert_to_ogg():
+    print("Post-processing: Converting WAV files to OGG...")
+    import subprocess
+    
+    # Try to add static_ffmpeg path if package is installed
+    try:
+        import static_ffmpeg
+        static_ffmpeg.add_paths()
+    except ImportError:
+        pass
+        
+    sounds_dir = "assets/sounds"
+    if not os.path.exists(sounds_dir):
+        return
+        
+    converted = 0
+    errors = 0
+    for f in os.listdir(sounds_dir):
+        if f.endswith(".wav"):
+            wav_path = os.path.join(sounds_dir, f)
+            ogg_path = os.path.join(sounds_dir, f.replace(".wav", ".ogg"))
+            
+            try:
+                # Run ffmpeg command
+                res = subprocess.run(
+                    ["ffmpeg", "-y", "-i", wav_path, "-c:a", "libvorbis", "-q:a", "4", ogg_path],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+                if res.returncode == 0:
+                    os.remove(wav_path)
+                    converted += 1
+                else:
+                    errors += 1
+            except Exception as e:
+                errors += 1
+                
+    if converted > 0:
+        print(f"Successfully converted {converted} WAV files to OGG and cleaned up temporary WAVs.")
+    if errors > 0:
+        print("Note: Some files could not be converted (make sure ffmpeg is on system path or static-ffmpeg is installed).")
 
 if __name__ == "__main__":
     main()
-
-

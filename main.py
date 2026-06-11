@@ -94,23 +94,23 @@ ambient_playing = False
 current_ambient_track = None
 
 try:
-    if os.path.exists("assets/sounds/jump.wav"):
-        jump_sfx = pygame.mixer.Sound("assets/sounds/jump.wav")
+    if os.path.exists("assets/sounds/jump.ogg"):
+        jump_sfx = pygame.mixer.Sound("assets/sounds/jump.ogg")
         jump_sfx.set_volume(0.3)
-    if os.path.exists("assets/sounds/point.wav"):
-        point_sfx = pygame.mixer.Sound("assets/sounds/point.wav")
+    if os.path.exists("assets/sounds/point.ogg"):
+        point_sfx = pygame.mixer.Sound("assets/sounds/point.ogg")
         point_sfx.set_volume(0.35)
-    if os.path.exists("assets/sounds/collision.wav"):
-        collision_sfx = pygame.mixer.Sound("assets/sounds/collision.wav")
+    if os.path.exists("assets/sounds/collision.ogg"):
+        collision_sfx = pygame.mixer.Sound("assets/sounds/collision.ogg")
         collision_sfx.set_volume(0.5)
-    if os.path.exists("assets/sounds/shield_break.wav"):
-        shield_break_sfx = pygame.mixer.Sound("assets/sounds/shield_break.wav")
+    if os.path.exists("assets/sounds/shield_break.ogg"):
+        shield_break_sfx = pygame.mixer.Sound("assets/sounds/shield_break.ogg")
         shield_break_sfx.set_volume(0.45)
-    if os.path.exists("assets/sounds/powerup_pickup.wav"):
-        powerup_pickup_sfx = pygame.mixer.Sound("assets/sounds/powerup_pickup.wav")
+    if os.path.exists("assets/sounds/powerup_pickup.ogg"):
+        powerup_pickup_sfx = pygame.mixer.Sound("assets/sounds/powerup_pickup.ogg")
         powerup_pickup_sfx.set_volume(0.35)
-    if os.path.exists("assets/sounds/coin_pickup.wav"):
-        coin_pickup_sfx = pygame.mixer.Sound("assets/sounds/coin_pickup.wav")
+    if os.path.exists("assets/sounds/coin_pickup.ogg"):
+        coin_pickup_sfx = pygame.mixer.Sound("assets/sounds/coin_pickup.ogg")
         coin_pickup_sfx.set_volume(0.4)
 except Exception as e:
     print(f"Error setting up SFX: {e}")
@@ -121,7 +121,7 @@ def play_ambient(volume=0.2, track_name="nature_ambient"):
         pygame.mixer.music.set_volume(volume)
         return
     try:
-        path = f"assets/sounds/{track_name}.wav"
+        path = f"assets/sounds/{track_name}.ogg"
         if os.path.exists(path):
             if current_ambient_track is not None:
                 pygame.mixer.music.stop()
