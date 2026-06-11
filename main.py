@@ -18,9 +18,9 @@ FPS = 60
 GROUND_HEIGHT = 100
 Y_GROUND = HEIGHT - GROUND_HEIGHT
 
-# Day-Night Cycle Constants (Slowing down the cycle by 4x)
-SKY_CYCLE_LEN = 14400 # 240 seconds at 60 FPS (4 minutes per full cycle)
-SKY_PHASE_LEN = 3600  # 60 seconds per phase (Day, Sunset, Night, Sunrise)
+# Day-Night Cycle Constants (15 seconds per phase, 60 seconds per full cycle)
+SKY_CYCLE_LEN = 3600 # 60 seconds at 60 FPS
+SKY_PHASE_LEN = 900  # 15 seconds per phase (Day, Sunset, Night, Sunrise)
 
 # Actual Window Dimensions (Starts at default, but is RESIZABLE)
 window_w = WIDTH
@@ -65,6 +65,13 @@ rain_surfaces.append(surf1)
 surf2 = pygame.Surface((4, 11), pygame.SRCALPHA)
 pygame.draw.line(surf2, (200, 220, 240), (3, 0), (0, 10), 2)
 rain_surfaces.append(surf2)
+
+# Pre-rendered wind sweep surfaces representing hard gust lines
+wind_surfaces = []
+for length, opacity in [(50, 45), (70, 65), (90, 85)]:
+    surf = pygame.Surface((length, 2), pygame.SRCALPHA)
+    surf.fill((235, 245, 255, opacity))
+    wind_surfaces.append(surf)
 
 # File paths
 LEADERBOARD_FILE = "leaderboard.json"
@@ -467,6 +474,27 @@ class RainParticle:
         else:
             # Blit pre-rendered rain droplet surface (extremely fast, looks like distinct droplets)
             surface.blit(rain_surfaces[self.layer], (int(self.x), int(self.y)))
+
+class WindParticle:
+    """Wind sweep line — fast horizontal line representing a hard blowing wind gust."""
+    def __init__(self):
+        self.reset(initial=True)
+        
+    def reset(self, initial=False):
+        # Spawn lines across the screen or just off-screen to the right
+        self.x = random.uniform(0, WIDTH + 100) if initial else random.uniform(WIDTH, WIDTH + 100)
+        self.y = random.uniform(30, Y_GROUND - 30)
+        self.layer = random.randint(0, 2)
+        # speed is fast to represent hard blowing wind gusts
+        self.speed = 14.0 + self.layer * 4.0
+        
+    def update(self, speed_multiplier=1.0):
+        self.x -= self.speed * speed_multiplier
+        if self.x < -100:
+            self.reset()
+            
+    def draw(self, surface):
+        surface.blit(wind_surfaces[self.layer], (int(self.x), int(self.y)))
 
 class Car:
     def __init__(self, y):
@@ -896,10 +924,15 @@ class Bird:
             life = random.randint(15, 30)
             particles.append(Particle(px, py, vx, vy, p_color, size, life, 'circle'))
             
-    def update(self, multiplier=1.0):
+    def update(self, multiplier=1.0, is_windy=False):
         self.vel = min(self.vel + self.gravity * multiplier, self.max_vel)
         self.y += self.vel * multiplier
         
+        # Wind turbulence buffeting during gale climate
+        if is_windy:
+            turbulence = math.sin(pygame.time.get_ticks() * 0.035) * 0.45 * multiplier
+            self.y += turbulence
+            
         if self.vel < 0:
             target_angle = 25.0
         else:
@@ -1441,6 +1474,8 @@ class Game:
         # Weather variables
         self.is_raining = False
         self.rain_particles = []
+        self.is_windy = False
+        self.wind_particles = []
         self.lightning_flash_timer = 0
         
         self.pipes = []
@@ -1593,6 +1628,8 @@ class Game:
         if self.mode == "normal":
             if getattr(self, "is_raining", False):
                 base = "rain_ambient"
+            elif getattr(self, "is_windy", False):
+                base = "winter_ambient"
             else:
                 base = "nature_ambient"
         elif self.mode == "night":
@@ -1645,14 +1682,14 @@ class Game:
         self.tier_popup_text = ""
         self.tier_popup_color = (0, 0, 0)
         
-        # Rainy Round check: 35% chance when in normal mode
-        rainy_round = self.mode == "normal" and random.random() < 0.35
-        if rainy_round:
-            self.is_raining = True
-            self.rain_particles = [RainParticle(initial=True) for _ in range(45)]
-        else:
-            self.is_raining = False
-            self.rain_particles = []
+        # Reset sky cycle and weather states to start in clear Morning
+        self.sky_ticks = 0
+        self.sky_phase = 0
+        self.tint_t = 0
+        self.is_raining = False
+        self.is_windy = False
+        self.rain_particles = [RainParticle(initial=True) for _ in range(45)]
+        self.wind_particles = [WindParticle() for _ in range(15)]
         self.lightning_flash_timer = 0
         
         # Spawn initial items for both pipes
@@ -2050,12 +2087,24 @@ class Game:
         if self.shake_timer > 0:
             self.shake_timer -= 1
             
-        # Update Day-Night Clock (Slowed down cycle using constants)
+        # Update Day-Night Clock (Slowing down the cycle using constants)
         if self.mode == "normal":
             self.sky_ticks = (self.sky_ticks + 1) % SKY_CYCLE_LEN
             # Phase transitions
             self.sky_phase = self.sky_ticks // SKY_PHASE_LEN
             self.tint_t = self.sky_phase
+            
+            # Dynamic climate weather transitions based on sky phase
+            # Only enable rain/wind during active gameplay
+            if self.state in ["PLAYING", "GAMEOVER"]:
+                self.is_raining = (self.sky_phase == 2)
+                self.is_windy = (self.sky_phase == 3)
+            else:
+                self.is_raining = False
+                self.is_windy = False
+        else:
+            self.is_raining = False
+            self.is_windy = False
             
         # Update backgrounds
         if self.mode == "city":
@@ -2074,19 +2123,24 @@ class Game:
         if self.mode == "winter":
             for flake in self.snowflakes:
                 flake.update()
-        elif self.mode == "normal" and getattr(self, "is_raining", False):
-            for drop in self.rain_particles:
-                drop.update()
-            # Lightning updates
-            if getattr(self, "lightning_flash_timer", 0) > 0:
-                self.lightning_flash_timer -= 1
-            else:
-                if random.random() < 0.0015:
-                    self.lightning_flash_timer = 2
-                
+        elif self.mode == "normal":
+            if getattr(self, "is_raining", False):
+                for drop in self.rain_particles:
+                    drop.update()
+                # Lightning updates
+                if getattr(self, "lightning_flash_timer", 0) > 0:
+                    self.lightning_flash_timer -= 1
+                else:
+                    if random.random() < 0.0015:
+                        self.lightning_flash_timer = 2
+            elif getattr(self, "is_windy", False):
+                w_mult = 0.5 if self.slow_timer > 0 else 1.0
+                for wind in self.wind_particles:
+                    wind.update(w_mult)
+                    
         if self.state == "START":
             self.is_raining = False
-            self.rain_particles = []
+            self.is_windy = False
             self.lightning_flash_timer = 0
             self.ground.update()
             self.bird.y = HEIGHT // 2 + math.sin(pygame.time.get_ticks() * 0.007) * 12
@@ -2123,7 +2177,9 @@ class Game:
                 # Switch ambient music to match new intensity
                 play_ambient(self.volume_level * 0.85, self.get_ambient_track())
             
-            speed_multiplier = 0.5 if self.slow_timer > 0 else 1.0
+            # Apply Windy climate speedup (1.35x speed increase)
+            wind_boost = 1.35 if (self.mode == "normal" and getattr(self, "is_windy", False)) else 1.0
+            speed_multiplier = (0.5 if self.slow_timer > 0 else 1.0) * wind_boost
             scroll_speed = tier_speed * speed_multiplier
             self.ground.speed = scroll_speed
             
@@ -2137,7 +2193,7 @@ class Game:
                 if self.immunity_timer > 0:
                     self.immunity_timer -= 1
                     
-                self.bird.update(speed_multiplier)
+                self.bird.update(speed_multiplier, getattr(self, "is_windy", False))
                 
                 # Emit speed trail based on skin
                 if pygame.time.get_ticks() % 2 == 0:
@@ -2310,9 +2366,13 @@ class Game:
         if self.mode == "winter":
             for flake in self.snowflakes:
                 flake.draw(draw_surf)
-        elif self.mode == "normal" and getattr(self, "is_raining", False):
-            for drop in self.rain_particles:
-                drop.draw(draw_surf)
+        elif self.mode == "normal":
+            if getattr(self, "is_raining", False):
+                for drop in self.rain_particles:
+                    drop.draw(draw_surf)
+            elif getattr(self, "is_windy", False):
+                for wind in self.wind_particles:
+                    wind.draw(draw_surf)
                 
         # 5. Pipes
         if self.state in ["PLAYING", "GAMEOVER"]:
