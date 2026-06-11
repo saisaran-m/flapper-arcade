@@ -72,8 +72,8 @@ jobs:
           # Initialize Capacitor with the Pygbag build directory
           npx cap init "Forest Flapper Arcade" "com.saisaran.flapperarcade" --web-dir=build/web
           
-          # Configure Capacitor to support cleartext for local WebView requests
-          python -c "import json; f=open('capacitor.config.json','r'); d=json.load(f); d['server']={'cleartext':True}; f=open('capacitor.config.json','w'); json.dump(d,f,indent=2)"
+          # Delete TypeScript config if created, and write JSON config with cleartext enabled
+          python -c "import os, json; os.path.exists('capacitor.config.ts') and os.remove('capacitor.config.ts'); json.dump({'appId':'com.saisaran.flapperarcade','appName':'Forest Flapper Arcade','webDir':'build/web','server':{'cleartext':True}}, open('capacitor.config.json','w'), indent=2)"
           
           # Add the Android platform
           npx cap add android
