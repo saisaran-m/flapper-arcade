@@ -6,7 +6,8 @@ import os
 import json
 import asyncio
 
-# Initialize pygame
+# Initialize pygame with stabilized mixer settings (forces 44.1 kHz stereo with a larger 4096 buffer to prevent browser audio crackling)
+pygame.mixer.pre_init(44100, -16, 2, 4096)
 pygame.init()
 pygame.mixer.init()
 

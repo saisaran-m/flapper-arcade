@@ -4,7 +4,7 @@ import math
 import random
 import os
 
-SAMPLE_RATE = 22050
+SAMPLE_RATE = 44100
 
 def save_wav(filename, samples):
     """Saves a list of floats (range -1.0 to 1.0) as a 16-bit mono WAV file."""
