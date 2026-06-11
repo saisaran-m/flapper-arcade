@@ -32,6 +32,23 @@ else:
 pygame.display.set_caption("Forest Flapper Arcade")
 clock = pygame.time.Clock()
 
+# Pre-rendered weather and celestial assets to eliminate dynamic allocations in the frame loop
+snow_surfaces = []
+for i in range(1, 6): # sizes 1 to 5
+    size = float(i)
+    surf = pygame.Surface((int(size * 2), int(size * 2)), pygame.SRCALPHA)
+    pygame.draw.circle(surf, (255, 255, 255, 180), (int(size), int(size)), int(size))
+    snow_surfaces.append(surf)
+
+star_surfaces = []
+for size in range(1, 4): # sizes 1 to 3
+    surf = pygame.Surface((6, 6), pygame.SRCALPHA)
+    pygame.draw.circle(surf, (255, 255, 255, 255), (3, 3), size)
+    star_surfaces.append(surf)
+
+# Global pre-allocated surface for particle draws to avoid GC overhead in frame loop
+PARTICLE_TEMP_SURF = pygame.Surface((64, 64), pygame.SRCALPHA)
+
 # File paths
 LEADERBOARD_FILE = "leaderboard.json"
 USERNAME_FILE = "username.txt"
@@ -307,18 +324,34 @@ class Particle:
         if self.life <= 0:
             return
         alpha = int((self.life / self.max_life) * 255)
-        p_surf = pygame.Surface((int(self.size * 2), int(self.size * 2)), pygame.SRCALPHA)
         c = list(self.color)
         if len(c) == 3:
             c.append(alpha)
         else:
             c[3] = int(c[3] * (self.life / self.max_life))
+        
+        # Clamp alpha to valid range
+        c[3] = max(0, min(255, int(c[3])))
+        
+        sz = int(self.size)
+        if sz <= 0:
+            return
             
-        if self.shape == 'circle':
-            pygame.draw.circle(p_surf, c, (int(self.size), int(self.size)), int(self.size))
-        elif self.shape == 'square':
-            pygame.draw.rect(p_surf, c, (0, 0, int(self.size * 2), int(self.size * 2)))
-        surface.blit(p_surf, (int(self.x - self.size), int(self.y - self.size)))
+        if sz <= 32:
+            # Reuse pre-allocated temp surface to prevent GC allocation spikes
+            PARTICLE_TEMP_SURF.fill((0, 0, 0, 0))
+            if self.shape == 'circle':
+                pygame.draw.circle(PARTICLE_TEMP_SURF, c, (sz, sz), sz)
+            else:
+                pygame.draw.rect(PARTICLE_TEMP_SURF, c, (0, 0, sz * 2, sz * 2))
+            surface.blit(PARTICLE_TEMP_SURF, (int(self.x - self.size), int(self.y - self.size)), (0, 0, sz * 2, sz * 2))
+        else:
+            p_surf = pygame.Surface((sz * 2, sz * 2), pygame.SRCALPHA)
+            if self.shape == 'circle':
+                pygame.draw.circle(p_surf, c, (sz, sz), sz)
+            else:
+                pygame.draw.rect(p_surf, c, (0, 0, sz * 2, sz * 2))
+            surface.blit(p_surf, (int(self.x - self.size), int(self.y - self.size)))
 
 class SnowParticle:
     def __init__(self):
@@ -338,10 +371,9 @@ class SnowParticle:
             self.speed = random.uniform(1.0, 2.5)
 
     def draw(self, surface):
-        # Soft transparent white circle
-        s_surf = pygame.Surface((int(self.size*2), int(self.size*2)), pygame.SRCALPHA)
-        pygame.draw.circle(s_surf, (255, 255, 255, 180), (int(self.size), int(self.size)), int(self.size))
-        surface.blit(s_surf, (int(self.x - self.size), int(self.y - self.size)))
+        idx = max(0, min(int(self.size) - 1, len(snow_surfaces) - 1))
+        surf = snow_surfaces[idx]
+        surface.blit(surf, (int(self.x - self.size), int(self.y - self.size)))
 
 class RainParticle:
     """Realistic rain drop — fast diagonal line representing slanted wind-driven rain."""
@@ -393,10 +425,13 @@ class RainParticle:
         
         # When drop hits the ground, trigger splash
         if self.y >= Y_GROUND - 2:
-            self.splash_x = self.x
-            self.splash_y = Y_GROUND - 2
-            self.splashing = True
-            self.splash_timer = 5  # brief splash animation
+            if self.layer == 0:  # Background drops reset instantly (saves CPU drawing splashes)
+                self.reset()
+            else:
+                self.splash_x = self.x
+                self.splash_y = Y_GROUND - 2
+                self.splashing = True
+                self.splash_timer = 5  # brief splash animation
             return
         
         # Reset if off-screen (slanted rain drifts left, so check left bound and bottom)
@@ -405,18 +440,13 @@ class RainParticle:
 
     def draw(self, surface):
         if self.splashing:
-            # Draw tiny expanding splash ring and ripples at ground level
+            # Draw simple V-shaped splash (fast line drawing, no costly ellipse math)
             splash_r = 5 - self.splash_timer + 2
             splash_color = (180, 200, 220)
             sx = int(self.splash_x)
             sy = int(self.splash_y)
-            
-            # Draw tiny expanding ripple ellipse
-            if splash_r > 0:
-                pygame.draw.ellipse(surface, splash_color, (sx - splash_r, sy - 1, splash_r * 2, 2), 1)
-            # Upward splash droplets
-            pygame.draw.line(surface, splash_color, (sx - splash_r // 2, sy), (sx - splash_r, sy - 3), 1)
-            pygame.draw.line(surface, splash_color, (sx + splash_r // 2, sy), (sx + splash_r, sy - 3), 1)
+            pygame.draw.line(surface, splash_color, (sx, sy), (sx - splash_r, sy - 3), 1)
+            pygame.draw.line(surface, splash_color, (sx, sy), (sx + splash_r, sy - 3), 1)
         else:
             # Draw raindrop as a line along its velocity vector (motion blur)
             x1 = int(self.x)
@@ -820,6 +850,8 @@ class Mountain:
 
 class Bird:
     def __init__(self):
+        self.size = 56
+        self.bird_surf = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
         self.reset()
         
     def reset(self):
@@ -863,9 +895,9 @@ class Bird:
         self.angle += (target_angle - self.angle) * 0.15
         
     def draw(self, surface, mode, skin):
-        size = 56
-        bird_surf = pygame.Surface((size, size), pygame.SRCALPHA)
-        cx, cy = size // 2, size // 2
+        bird_surf = self.bird_surf
+        bird_surf.fill((0, 0, 0, 0))
+        cx, cy = self.size // 2, self.size // 2
         
         flap_speed = 0.012 if self.vel >= 0 else 0.025
         wing_y = cy + int(math.sin(pygame.time.get_ticks() * flap_speed) * 4)
@@ -1408,6 +1440,22 @@ class Game:
         self.is_new_high_score = False
         self.shake_timer = 0
         
+        # Pre-rendered weather/celestial overlays
+        self.storm_overlay_surf = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        self.storm_overlay_surf.fill((90, 100, 110, 140))
+        
+        # Pre-render Synthwave Sun
+        r = 75
+        self.synthwave_sun_surf = pygame.Surface((r * 3, r * 3), pygame.SRCALPHA)
+        pygame.draw.circle(self.synthwave_sun_surf, (255, 0, 180, 45), (int(r * 1.5), int(r * 1.5)), int(r * 1.2))
+        pygame.draw.circle(self.synthwave_sun_surf, (255, 100, 0, 90), (int(r * 1.5), int(r * 1.5)), r)
+        pygame.draw.circle(self.synthwave_sun_surf, (255, 160, 0), (int(r * 1.5), int(r * 1.5)), r)
+        sun_y = int(r * 1.5)
+        sun_x = int(r * 1.5)
+        for sy in range(sun_y - r, sun_y + r, 8):
+            th = int(2 + (sy - (sun_y - r)) / 15)
+            pygame.draw.rect(self.synthwave_sun_surf, (15, 10, 28), (sun_x - r - 5, sy, r * 2 + 10, th))
+            
         # Modals
         self.show_leaderboard = False
         self.show_skins_shop = False
@@ -1445,6 +1493,25 @@ class Game:
         self.tier_popup_timer = 0
         self.tier_popup_text = ""
         self.tier_popup_color = (0, 0, 0)
+        
+        # Pre-allocated drawing surfaces to eliminate dynamic allocations in the game loop
+        self.draw_surf = pygame.Surface((WIDTH, HEIGHT))
+        self.lightning_flash_surf = pygame.Surface((WIDTH, HEIGHT))
+        self.lightning_flash_surf.fill((255, 255, 255))
+        
+        # Caching variables for HUD text rendering to prevent memory churn
+        self._hud_score = -1
+        self._hud_score_surf = None
+        self._hud_score_shadow_surf = None
+        
+        self._hud_tier_name = ""
+        self._hud_tier_surf = None
+        
+        self._hud_username = ""
+        self._hud_pilot_surf = None
+        
+        self._hud_session_coins = -1
+        self._hud_coin_lbl = None
 
         
     def get_player_high_score(self):
@@ -1565,9 +1632,10 @@ class Game:
         self.tier_popup_color = (0, 0, 0)
         
         # Rainy Round check: 35% chance when in normal mode
-        if self.mode == "normal" and random.random() < 0.35:
+        rainy_round = self.mode == "normal" and random.random() < 0.35
+        if rainy_round:
             self.is_raining = True
-            self.rain_particles = [RainParticle(initial=True) for _ in range(120)]
+            self.rain_particles = [RainParticle(initial=True) for _ in range(45)]
         else:
             self.is_raining = False
             self.rain_particles = []
@@ -2157,7 +2225,7 @@ class Game:
 
     def draw(self):
         # 1. Draw virtual screen
-        draw_surf = pygame.Surface((WIDTH, HEIGHT))
+        draw_surf = self.draw_surf
         
         # Draw sky gradient based on mode/time
         if self.mode == "normal":
@@ -2170,29 +2238,24 @@ class Game:
                 # Fade Day to Sunset
                 t = (self.sky_ticks % SKY_PHASE_LEN) / SKY_PHASE_LEN
                 draw_surf.blit(sky_cache["day"], (0, 0))
-                overlay = sky_cache["sunset"].copy()
-                overlay.set_alpha(int(t * 255))
-                draw_surf.blit(overlay, (0, 0))
+                sky_cache["sunset"].set_alpha(int(t * 255))
+                draw_surf.blit(sky_cache["sunset"], (0, 0))
             elif phase == 2:
                 # Fade Sunset to Night
                 t = (self.sky_ticks % SKY_PHASE_LEN) / SKY_PHASE_LEN
                 draw_surf.blit(sky_cache["sunset"], (0, 0))
-                overlay = sky_cache["night"].copy()
-                overlay.set_alpha(int(t * 255))
-                draw_surf.blit(overlay, (0, 0))
+                sky_cache["night"].set_alpha(int(t * 255))
+                draw_surf.blit(sky_cache["night"], (0, 0))
             else:
                 # Fade Night to Sunrise to Day
                 t = (self.sky_ticks % SKY_PHASE_LEN) / SKY_PHASE_LEN
                 draw_surf.blit(sky_cache["night"], (0, 0))
-                overlay = sky_cache["sunrise"].copy()
-                overlay.set_alpha(int(t * 255))
-                draw_surf.blit(overlay, (0, 0))
+                sky_cache["sunrise"].set_alpha(int(t * 255))
+                draw_surf.blit(sky_cache["sunrise"], (0, 0))
                 
-            # Overcast overlay if raining
+            # Overcast overlay if raining (uses pre-rendered surface)
             if getattr(self, "is_raining", False):
-                storm_overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-                storm_overlay.fill((90, 100, 110, 140))
-                draw_surf.blit(storm_overlay, (0, 0))
+                draw_surf.blit(self.storm_overlay_surf, (0, 0))
         else:
             # Static mode gradients
             if self.mode == "night":
@@ -2268,10 +2331,13 @@ class Game:
         
         # Draw floating score popups
         for popup in self.score_popups:
+            if "surf" not in popup:
+                text = popup.get("text", "+1")
+                color = popup.get("color", (255, 230, 100))
+                popup["surf"] = font_ui.render(text, True, color)
+                
             alpha = int((popup["life"] / popup["max_life"]) * 255)
-            text = popup.get("text", "+1")
-            color = popup.get("color", (255, 230, 100))
-            popup_surf = font_ui.render(text, True, color)
+            popup_surf = popup["surf"]
             popup_surf.set_alpha(alpha)
             draw_surf.blit(popup_surf, (popup["x"] - popup_surf.get_width() // 2, popup["y"] - popup_surf.get_height() // 2))
         
@@ -2299,11 +2365,11 @@ class Game:
             
         # Apply lightning flash
         if getattr(self, "lightning_flash_timer", 0) > 0:
-            flash_surf = pygame.Surface((WIDTH, HEIGHT))
-            flash_surf.fill((255, 255, 255))
             if self.lightning_flash_timer == 1:
-                flash_surf.set_alpha(180)
-            draw_surf.blit(flash_surf, (0, 0))
+                self.lightning_flash_surf.set_alpha(180)
+            else:
+                self.lightning_flash_surf.set_alpha(255)
+            draw_surf.blit(self.lightning_flash_surf, (0, 0))
             
 
             
@@ -2333,24 +2399,8 @@ class Game:
 
     def draw_celestial(self, surface):
         if self.mode == "night":
-            # 1. Synthwave Grid Sun
-            # Draw big glowing magenta/orange sun at horizon
-            sun_x, sun_y, r = 250, 420, 75
-            
-            # Sun glow
-            g_surf = pygame.Surface((r*3, r*3), pygame.SRCALPHA)
-            pygame.draw.circle(g_surf, (255, 0, 180, 45), (int(r*1.5), int(r*1.5)), int(r*1.2))
-            pygame.draw.circle(g_surf, (255, 100, 0, 90), (int(r*1.5), int(r*1.5)), r)
-            surface.blit(g_surf, (int(sun_x - r*1.5), int(sun_y - r*1.5)))
-            
-            # Main sun core
-            pygame.draw.circle(surface, (255, 160, 0), (sun_x, sun_y), r)
-            
-            # Overlay horizontal black lines (retro scanlines)
-            for sy in range(sun_y - r, sun_y + r, 8):
-                # thicker line gaps at bottom
-                th = int(2 + (sy - (sun_y - r)) / 15)
-                pygame.draw.rect(surface, (15, 10, 28), (sun_x - r - 5, sy, r*2 + 10, th))
+            # 1. Synthwave Grid Sun (uses pre-rendered surface)
+            surface.blit(self.synthwave_sun_surf, (250 - 225 // 2, 420 - 225 // 2))
                 
         elif self.mode == "city":
             # Big golden sunset sun sinking behind towers
@@ -2382,13 +2432,13 @@ class Game:
                     elif self.sky_phase == 3:
                         sun_c = lerp_color((220, 60, 40), (255, 220, 100), (self.sky_ticks % SKY_PHASE_LEN)/SKY_PHASE_LEN)
                         
+                    # Blended corona color using sky backdrop (requires zero allocations!)
+                    sky_back = surface.get_at((x, max(0, y - 32)))[:3]
+                    corona_color = lerp_color(sun_c, sky_back, 0.45)
+                    # Corona glow circle
+                    pygame.draw.circle(surface, corona_color, (x, y), 32)
                     # Sun core
                     pygame.draw.circle(surface, sun_c, (x, y), 24)
-                    # Corona glow
-                    c_surf = pygame.Surface((70, 70), pygame.SRCALPHA)
-                    pygame.draw.circle(c_surf, list(sun_c) + [40], (35, 35), 32)
-                    pygame.draw.circle(c_surf, list(sun_c) + [80], (35, 35), 24)
-                    surface.blit(c_surf, (x - 35, y - 35))
                 else: # Night shows crescent moon
                     # Draw Moon
                     pygame.draw.circle(surface, (230, 240, 255), (x, y), 18)
@@ -2412,10 +2462,11 @@ class Game:
                     sy = random.randint(5, Y_GROUND - 80)
                     # Twinkle sizing
                     twinkle = math.sin(pygame.time.get_ticks() * 0.005 + sx) * 1.5 + 2.0
+                    size_idx = max(0, min(int(twinkle) - 1, len(star_surfaces) - 1))
                     
-                    s_surf = pygame.Surface((6, 6), pygame.SRCALPHA)
-                    pygame.draw.circle(s_surf, (255, 255, 255, star_alpha), (3, 3), max(1, int(twinkle)))
-                    surface.blit(s_surf, (sx - 3, sy - 3))
+                    surf = star_surfaces[size_idx]
+                    surf.set_alpha(star_alpha)
+                    surface.blit(surf, (sx - 3, sy - 3))
 
     def draw_lake(self, surface):
         # Position river touching the ground (618 to 650)
@@ -2860,13 +2911,16 @@ class Game:
         self.draw_button(surface, btn_confirm, "Save Name", True, (100, 210, 100))
 
     def draw_hud(self, surface):
-        score_str = str(self.score)
-        shadow_surf = font_score.render(score_str, True, (0, 0, 0))
-        main_surf = font_score.render(score_str, True, (255, 255, 255))
-        sx = WIDTH // 2 - main_surf.get_width() // 2
+        if self.score != self._hud_score or self._hud_score_surf is None:
+            score_str = str(self.score)
+            self._hud_score_shadow_surf = font_score.render(score_str, True, (0, 0, 0))
+            self._hud_score_surf = font_score.render(score_str, True, (255, 255, 255))
+            self._hud_score = self.score
+            
+        sx = WIDTH // 2 - self._hud_score_surf.get_width() // 2
         sy = 45
-        surface.blit(shadow_surf, (sx + 3, sy + 3))
-        surface.blit(main_surf, (sx, sy))
+        surface.blit(self._hud_score_shadow_surf, (sx + 3, sy + 3))
+        surface.blit(self._hud_score_surf, (sx, sy))
         
         # Difficulty Tier Badge (pill shape below score)
         tier_name, tier_color, _, _ = self.get_difficulty_tier()
@@ -2874,44 +2928,66 @@ class Game:
             # Pulsing color for INSANE
             pulse = int(127 + 127 * math.sin(pygame.time.get_ticks() * 0.012))
             tier_color = (255, pulse // 3, pulse // 5)
-        tier_surf = font_small.render(tier_name, True, (0, 0, 0))
-        tw = tier_surf.get_width() + 16
-        th = tier_surf.get_height() + 6
+            
+        if tier_name != self._hud_tier_name or self._hud_tier_surf is None:
+            self._hud_tier_surf = font_small.render(tier_name, True, (0, 0, 0))
+            self._hud_tier_name = tier_name
+            
+        tw = self._hud_tier_surf.get_width() + 16
+        th = self._hud_tier_surf.get_height() + 6
         tier_x = WIDTH // 2 - tw // 2
-        tier_y = sy + main_surf.get_height() + 2
+        tier_y = sy + self._hud_score_surf.get_height() + 2
+        
         # Pill background
         pill_rect = pygame.Rect(tier_x, tier_y, tw, th)
         pygame.draw.rect(surface, tier_color, pill_rect, 0, 8)
         pygame.draw.rect(surface, (0, 0, 0), pill_rect, 1, 8)
-        surface.blit(tier_surf, (tier_x + 8, tier_y + 3))
+        surface.blit(self._hud_tier_surf, (tier_x + 8, tier_y + 3))
         
         # Tier Change Popup Banner (centered, fades out)
         if self.tier_popup_timer > 0:
             popup_alpha = int((self.tier_popup_timer / 90) * 255)
-            popup_text_surf = font_title.render(self.tier_popup_text, True, self.tier_popup_color)
+            
+            if self.tier_popup_text != getattr(self, "_tier_popup_text_cache", "") or getattr(self, "_tier_popup_surf_cache", None) is None:
+                self._tier_popup_text_cache = self.tier_popup_text
+                self._tier_popup_surf_cache = font_title.render(self.tier_popup_text, True, self.tier_popup_color)
+                
+                # Pre-calculate bar size and pre-allocate bar surface
+                bar_w = self._tier_popup_surf_cache.get_width() + 40
+                bar_h = self._tier_popup_surf_cache.get_height() + 16
+                self._tier_popup_bar_surf = pygame.Surface((bar_w, bar_h), pygame.SRCALPHA)
+                
+            popup_text_surf = self._tier_popup_surf_cache
             popup_text_surf.set_alpha(popup_alpha)
-            # Background bar
-            bar_w = popup_text_surf.get_width() + 40
-            bar_h = popup_text_surf.get_height() + 16
+            
+            bar_w = self._tier_popup_bar_surf.get_width()
+            bar_h = self._tier_popup_bar_surf.get_height()
             bar_x = WIDTH // 2 - bar_w // 2
             bar_y = HEIGHT // 3 - bar_h // 2
-            bar_surf = pygame.Surface((bar_w, bar_h), pygame.SRCALPHA)
-            bar_surf.fill((0, 0, 0, min(180, popup_alpha)))
-            pygame.draw.rect(bar_surf, (*self.tier_popup_color, min(200, popup_alpha)), (0, 0, bar_w, bar_h), 3, 6)
-            surface.blit(bar_surf, (bar_x, bar_y))
+            
+            # Re-fill the existing bar surface instead of allocating a new one
+            self._tier_popup_bar_surf.fill((0, 0, 0, min(180, popup_alpha)))
+            pygame.draw.rect(self._tier_popup_bar_surf, (*self.tier_popup_color, min(200, popup_alpha)), (0, 0, bar_w, bar_h), 3, 6)
+            
+            surface.blit(self._tier_popup_bar_surf, (bar_x, bar_y))
             surface.blit(popup_text_surf, (WIDTH // 2 - popup_text_surf.get_width() // 2, bar_y + 8))
         
         # Current active pilot HUD display
-        pilot_surf = font_small.render(f"Pilot: {self.username}", True, (230, 230, 230))
-        surface.blit(pilot_surf, (15, 15))
+        if self.username != self._hud_username or self._hud_pilot_surf is None:
+            self._hud_pilot_surf = font_small.render(f"Pilot: {self.username}", True, (230, 230, 230))
+            self._hud_username = self.username
+        surface.blit(self._hud_pilot_surf, (15, 15))
         
         # Draw session coins display on top right
         coin_x = WIDTH - 80
         coin_y = 15
         pygame.draw.ellipse(surface, (255, 215, 0), (coin_x, coin_y + 2, 16, 16))
         pygame.draw.ellipse(surface, (212, 175, 55), (coin_x, coin_y + 2, 16, 16), 1)
-        coin_lbl = font_bold_small.render(f"x {self.session_coins}", True, (255, 215, 0))
-        surface.blit(coin_lbl, (coin_x + 22, coin_y + 1))
+        
+        if self.session_coins != self._hud_session_coins or self._hud_coin_lbl is None:
+            self._hud_coin_lbl = font_bold_small.render(f"x {self.session_coins}", True, (255, 215, 0))
+            self._hud_session_coins = self.session_coins
+        surface.blit(self._hud_coin_lbl, (coin_x + 22, coin_y + 1))
 
     def draw_gameover_screen(self, surface):
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
