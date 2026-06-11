@@ -58,14 +58,24 @@ jobs:
         run: |
           # Create package.json and install Capacitor dependencies
           npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets
           
           # Initialize Capacitor with the Pygbag build directory
           npx cap init "Forest Flapper Arcade" "com.saisaran.flapperarcade" --web-dir=build/web
           
+          # Configure Capacitor to load the game remotely to bypass CORS/Loader hang
+          # and also support auto-updates on mobile
+          python -c "import json; f=open('capacitor.config.json','r'); d=json.load(f); d['server']={'url':'https://saisaran-m.github.io/flapper-arcade/','allowNavigation':['saisaran-m.github.io']}; f=open('capacitor.config.json','w'); json.dump(d,f,indent=2)"
+          
           # Add the Android platform
           npx cap add android
-                    echo "configurations.all { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'; exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8' }" >> android/app/build.gradle
+          
+          # Generate launcher icons and splash screens using the updated logo assets
+          npx capacitor-assets generate --android
+          
+          # Exclude conflicting kotlin versions in build.gradle
+          echo "configurations.all { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'; exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8' }" >> android/app/build.gradle
+          
           # Sync web files into the Android project
           npx cap sync
           
