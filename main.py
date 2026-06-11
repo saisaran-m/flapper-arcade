@@ -49,6 +49,23 @@ for size in range(1, 4): # sizes 1 to 3
 # Global pre-allocated surface for particle draws to avoid GC overhead in frame loop
 PARTICLE_TEMP_SURF = pygame.Surface((64, 64), pygame.SRCALPHA)
 
+# Pre-rendered rain drop surfaces representing distinct droplets (no long blurs/streaks)
+rain_surfaces = []
+# Layer 0 (Far): size 2x5
+surf0 = pygame.Surface((2, 5), pygame.SRCALPHA)
+pygame.draw.line(surf0, (140, 155, 170), (1, 0), (0, 4), 1)
+rain_surfaces.append(surf0)
+
+# Layer 1 (Mid): size 3x8
+surf1 = pygame.Surface((3, 8), pygame.SRCALPHA)
+pygame.draw.line(surf1, (170, 190, 210), (2, 0), (0, 7), 1)
+rain_surfaces.append(surf1)
+
+# Layer 2 (Near): size 4x11
+surf2 = pygame.Surface((4, 11), pygame.SRCALPHA)
+pygame.draw.line(surf2, (200, 220, 240), (3, 0), (0, 10), 2)
+rain_surfaces.append(surf2)
+
 # File paths
 LEADERBOARD_FILE = "leaderboard.json"
 USERNAME_FILE = "username.txt"
@@ -381,8 +398,8 @@ class RainParticle:
         self.reset(initial)
         
     def reset(self, initial=False):
-        # Since rain falls slanted to the left, spawn drops from X=0 to WIDTH+150 to sweep across the screen
-        self.x = random.uniform(0, WIDTH + 150)
+        # Spawn drops across screen width (extended slightly for slant drift)
+        self.x = random.uniform(0, WIDTH + 50)
         self.y = random.uniform(0, Y_GROUND) if initial else random.uniform(-100, -10)
         
         # Depth layers: 0=far (background, small, fast), 1=mid (playfield), 2=near (foreground, large, very fast)
@@ -390,20 +407,20 @@ class RainParticle:
         
         if self.layer == 0:
             # Far background drops: thin, shorter, slightly slower
-            self.speed_y = random.uniform(15.0, 19.0)
-            self.speed_x = random.uniform(-3.5, -2.5)  # slanted wind
+            self.speed_y = random.uniform(6.0, 8.0)
+            self.speed_x = random.uniform(-1.0, -0.5)
             self.thickness = 1
             self.color = (130, 145, 160)
         elif self.layer == 1:
             # Mid playfield drops
-            self.speed_y = random.uniform(20.0, 25.0)
-            self.speed_x = random.uniform(-5.0, -3.5)
+            self.speed_y = random.uniform(9.0, 12.0)
+            self.speed_x = random.uniform(-1.5, -1.0)
             self.thickness = 1
             self.color = (160, 180, 200)
         else:
             # Near foreground drops: thicker, longest, extremely fast
-            self.speed_y = random.uniform(26.0, 32.0)
-            self.speed_x = random.uniform(-6.5, -5.0)
+            self.speed_y = random.uniform(13.0, 16.0)
+            self.speed_x = random.uniform(-2.0, -1.5)
             self.thickness = 2
             self.color = (190, 210, 230)
         
@@ -435,7 +452,7 @@ class RainParticle:
             return
         
         # Reset if off-screen (slanted rain drifts left, so check left bound and bottom)
-        if self.x < -20 or self.x > WIDTH + 170:
+        if self.x < -20 or self.x > WIDTH + 70:
             self.reset()
 
     def draw(self, surface):
@@ -448,12 +465,8 @@ class RainParticle:
             pygame.draw.line(surface, splash_color, (sx, sy), (sx - splash_r, sy - 3), 1)
             pygame.draw.line(surface, splash_color, (sx, sy), (sx + splash_r, sy - 3), 1)
         else:
-            # Draw raindrop as a line along its velocity vector (motion blur)
-            x1 = int(self.x)
-            y1 = int(self.y)
-            x2 = int(self.x + self.speed_x * 0.9)
-            y2 = int(self.y + self.speed_y * 0.9)
-            pygame.draw.line(surface, self.color, (x1, y1), (x2, y2), self.thickness)
+            # Blit pre-rendered rain droplet surface (extremely fast, looks like distinct droplets)
+            surface.blit(rain_surfaces[self.layer], (int(self.x), int(self.y)))
 
 class Car:
     def __init__(self, y):
@@ -1441,8 +1454,9 @@ class Game:
         self.shake_timer = 0
         
         # Pre-rendered weather/celestial overlays
-        self.storm_overlay_surf = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        self.storm_overlay_surf.fill((90, 100, 110, 140))
+        self.storm_overlay_surf = pygame.Surface((WIDTH, HEIGHT))
+        self.storm_overlay_surf.fill((90, 100, 110))
+        self.storm_overlay_surf.set_alpha(140)
         
         # Pre-render Synthwave Sun
         r = 75
