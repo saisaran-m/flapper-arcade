@@ -12,7 +12,7 @@ A beautifully crafted Flappy Bird-style arcade game built entirely in Python wit
 ## ✨ Features
 
 ### 🎮 4 Game Modes
-- **🌲 Forest** — Lush nature with a dynamic 4-stage weather cycle: Morning (Clear), Evening (Sunset), Rain (Stormy overcast & lightning), and Wind (Gale-force sweeps with 1.35x speedup & turbulence). Includes an animated river.
+- **🌲 Forest** — Lush nature with a dynamic 4-stage weather cycle (30 seconds per phase): Morning (Clear), Evening (Sunset), Rain (Stormy overcast & lightning), and Wind (Gale-force sweeps with 1.35x speedup & turbulence). Includes an animated river.
 - **🌃 Synthwave** — Retro neon aesthetic with scanline sun, grid mountains, and pulsing cyan/magenta pipes
 - **🏙️ City** — Urban skyline with animated buildings, traffic, and industrial steel girder obstacles
 - **❄️ Winter** — Snowy landscape with falling snowflakes, frost-tinted trees, and howling wind
