@@ -28,10 +28,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install pygame pygbag
 
+      - name: Copy icon to logo.png for Capacitor Assets
+        run: |
+          cp assets/icon.png assets/logo.png
+
       - name: Build Web Game with Pygbag
         run: |
-          # Pygbag compiles main.py and packs assets into build/web/
-          python -m pygbag --build --disable-sound-format-error main.py
+          # Pygbag compiles main.py and packs assets into build/web/ using custom template
+          python -m pygbag --build --template assets/web.tmpl --disable-sound-format-error main.py
+
+      - name: Rename Pygbag archive for Android compatibility
+        run: |
+          # Rename .tar.gz to .data to bypass Android aapt compression & security blocks
+          mv build/web/flapper-arcade.tar.gz build/web/flapper-arcade.data
 
       # --- 2. DEPLOY TO GITHUB PAGES ---
       - name: Deploy to GitHub Pages
@@ -63,15 +72,14 @@ jobs:
           # Initialize Capacitor with the Pygbag build directory
           npx cap init "Forest Flapper Arcade" "com.saisaran.flapperarcade" --web-dir=build/web
           
-          # Configure Capacitor to load the game remotely to bypass CORS/Loader hang
-          # and also support auto-updates on mobile
-          python -c "import json; f=open('capacitor.config.json','r'); d=json.load(f); d['server']={'url':'https://saisaran-m.github.io/flapper-arcade/','allowNavigation':['saisaran-m.github.io']}; f=open('capacitor.config.json','w'); json.dump(d,f,indent=2)"
+          # Configure Capacitor to support cleartext for local WebView requests
+          python -c "import json; f=open('capacitor.config.json','r'); d=json.load(f); d['server']={'cleartext':True}; f=open('capacitor.config.json','w'); json.dump(d,f,indent=2)"
           
           # Add the Android platform
           npx cap add android
           
           # Generate launcher icons and splash screens using the updated logo assets
-          npx capacitor-assets generate --android
+          npx capacitor-assets generate --android --iconBackgroundColor '#0b0c10' --iconBackgroundColorDark '#0b0c10' --splashBackgroundColor '#0b0c10' --splashBackgroundColorDark '#0b0c10'
           
           # Exclude conflicting kotlin versions in build.gradle
           echo "configurations.all { exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'; exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8' }" >> android/app/build.gradle
