@@ -5,6 +5,7 @@ import sys
 import os
 import json
 import asyncio
+import time
 
 # Initialize pygame with stabilized mixer settings (forces 44.1 kHz stereo with a larger 4096 buffer to prevent browser audio crackling)
 pygame.mixer.pre_init(44100, -16, 2, 4096)
@@ -233,7 +234,7 @@ def load_equipped_skin():
         try:
             with open(EQUIPPED_SKIN_FILE, "r") as f:
                 skin = f.read().strip()
-                if skin in ["classic", "ninja", "mech", "phoenix"]:
+                if skin in ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]:
                     return skin
         except:
             pass
@@ -263,6 +264,14 @@ def load_profile_data(username):
                 if "high_score" not in data: data["high_score"] = 0
                 if "coins" not in data: data["coins"] = 0
                 if "unlocked_skins" not in data: data["unlocked_skins"] = ["classic"]
+                if "last_daily_claim" not in data: data["last_daily_claim"] = 0.0
+                if "achievements" not in data:
+                    data["achievements"] = {
+                        "first_flight": False,
+                        "coin_collector": 0,
+                        "insane_pilot": False,
+                        "skin_enthusiast": False
+                    }
                 return data
         except Exception as e:
             print(f"Error loading profile: {e}")
@@ -270,7 +279,14 @@ def load_profile_data(username):
     return {
         "high_score": 0,
         "coins": 0,
-        "unlocked_skins": ["classic"]
+        "unlocked_skins": ["classic"],
+        "last_daily_claim": 0.0,
+        "achievements": {
+            "first_flight": False,
+            "coin_collector": 0,
+            "insane_pilot": False,
+            "skin_enthusiast": False
+        }
     }
 
 def save_profile_data(username, data):
@@ -969,6 +985,16 @@ class Bird:
             wing_color = (255, 180, 0)
             beak_color = (255, 220, 0)
             outline_color = (50, 15, 15)
+        elif skin == "sigma":
+            body_color = (55, 55, 60)
+            wing_color = (255, 180, 0)
+            beak_color = (255, 120, 0)
+            outline_color = (20, 20, 20)
+        elif skin == "skibidi":
+            body_color = (230, 230, 240)
+            wing_color = (255, 255, 255)
+            beak_color = (255, 100, 0)
+            outline_color = (30, 30, 35)
         elif mode == "night" and skin == "classic":
             # Neon Cyberpunk bird
             body_color = (255, 0, 180)  # Neon pink
@@ -976,52 +1002,79 @@ class Bird:
             beak_color = (255, 230, 0)
             outline_color = (255, 255, 255)
             
-        # 1. Beak
-        pygame.draw.polygon(bird_surf, beak_color, [(cx + 12, cy - 3), (cx + 21, cy), (cx + 12, cy + 5)])
-        pygame.draw.polygon(bird_surf, outline_color, [(cx + 12, cy - 3), (cx + 21, cy), (cx + 12, cy + 5)], 1 if (mode == "night" and skin == "classic") else 2)
-        
-        # 2. Main Body
-        pygame.draw.circle(bird_surf, body_color, (cx, cy), self.radius)
-        pygame.draw.circle(bird_surf, outline_color, (cx, cy), self.radius, 1 if (mode == "night" and skin == "classic") else 2)
-        
-        # Accessories
-        if skin == "ninja":
-            # Red headband
-            pygame.draw.rect(bird_surf, (180, 30, 30), (cx - 14, cy - 9, 26, 4))
-            pygame.draw.polygon(bird_surf, (180, 30, 30), [(cx - 14, cy - 7), (cx - 22, cy - 4), (cx - 20, cy - 9)])
-            pygame.draw.polygon(bird_surf, (180, 30, 30), [(cx - 14, cy - 7), (cx - 24, cy - 10), (cx - 19, cy - 12)])
-        elif skin == "mech":
-            # Panel cross lines
-            pygame.draw.line(bird_surf, outline_color, (cx - 10, cy), (cx + 10, cy), 1)
-            pygame.draw.line(bird_surf, outline_color, (cx, cy - 10), (cx, cy + 10), 1)
-        elif skin == "phoenix":
-            # Flame feathers on head top
-            pygame.draw.polygon(bird_surf, (255, 120, 0), [(cx - 8, cy - 14), (cx - 18, cy - 24), (cx - 2, cy - 15)])
-            pygame.draw.polygon(bird_surf, (220, 45, 30), [(cx - 2, cy - 15), (cx - 8, cy - 28), (cx + 4, cy - 15)])
-            
-        if skin in ["classic", "phoenix"] and not (mode == "night" and skin == "classic"):
-            # Belly highlight
-            pygame.draw.arc(bird_surf, (255, 255, 255), (cx - self.radius + 3, cy - 2, self.radius * 2 - 6, self.radius), 0, math.pi, 2)
-            
-        # 3. Eye
-        eye_x = cx + 6
-        eye_y = cy - 5
-        if skin == "mech":
-            # Red glowing visor
-            pygame.draw.rect(bird_surf, (0, 240, 255), (eye_x - 3, eye_y - 2, 8, 4), 0, 1)
-            pygame.draw.rect(bird_surf, outline_color, (eye_x - 3, eye_y - 2, 8, 4), 1, 1)
+        if skin == "skibidi":
+            # Draw toilet bowl
+            pygame.draw.ellipse(bird_surf, (230, 230, 240), (cx - self.radius, cy - 3, self.radius * 2, self.radius + 5))
+            pygame.draw.ellipse(bird_surf, outline_color, (cx - self.radius, cy - 3, self.radius * 2, self.radius + 5), 2)
+            # Draw toilet tank
+            pygame.draw.rect(bird_surf, (255, 255, 255), (cx - self.radius - 2, cy - self.radius, 7, self.radius * 2))
+            pygame.draw.rect(bird_surf, outline_color, (cx - self.radius - 2, cy - self.radius, 7, self.radius * 2), 2)
+            # Draw head sticking out
+            head_r = 7
+            pygame.draw.circle(bird_surf, (255, 200, 180), (cx + 2, cy - 6), head_r)
+            pygame.draw.circle(bird_surf, outline_color, (cx + 2, cy - 6), head_r, 2)
+            # Draw eye on head
+            pygame.draw.circle(bird_surf, (0, 0, 0), (cx + 4, cy - 7), 1)
+            # Draw beak on head
+            pygame.draw.polygon(bird_surf, beak_color, [(cx + 8, cy - 8), (cx + 13, cy - 6), (cx + 8, cy - 4)])
+            pygame.draw.polygon(bird_surf, outline_color, [(cx + 8, cy - 8), (cx + 13, cy - 6), (cx + 8, cy - 4)], 1)
+            # Draw custom wing on toilet
+            wing_w = 9
+            wing_h = 7
+            pygame.draw.ellipse(bird_surf, (180, 180, 185), (cx - 8, wing_y - wing_h // 2, wing_w, wing_h))
+            pygame.draw.ellipse(bird_surf, outline_color, (cx - 8, wing_y - wing_h // 2, wing_w, wing_h), 2)
         else:
-            pygame.draw.circle(bird_surf, (255, 255, 255), (eye_x, eye_y), 5)
-            pygame.draw.circle(bird_surf, outline_color, (eye_x, eye_y), 5, 1)
-            pygame.draw.circle(bird_surf, (0, 0, 0), (eye_x + 1, eye_y), 2)
-            if skin != "ninja":
-                pygame.draw.circle(bird_surf, (255, 255, 255), (eye_x - 1, eye_y - 1), 1)
+            # 1. Beak
+            pygame.draw.polygon(bird_surf, beak_color, [(cx + 12, cy - 3), (cx + 21, cy), (cx + 12, cy + 5)])
+            pygame.draw.polygon(bird_surf, outline_color, [(cx + 12, cy - 3), (cx + 21, cy), (cx + 12, cy + 5)], 1 if (mode == "night" and skin == "classic") else 2)
             
-        # 4. Wing
-        wing_w = 13
-        wing_h = 10
-        pygame.draw.ellipse(bird_surf, wing_color, (cx - 11, wing_y - wing_h // 2, wing_w, wing_h))
-        pygame.draw.ellipse(bird_surf, outline_color, (cx - 11, wing_y - wing_h // 2, wing_w, wing_h), 1 if (mode == "night" and skin == "classic") else 2)
+            # 2. Main Body
+            pygame.draw.circle(bird_surf, body_color, (cx, cy), self.radius)
+            pygame.draw.circle(bird_surf, outline_color, (cx, cy), self.radius, 1 if (mode == "night" and skin == "classic") else 2)
+            
+            # Accessories
+            if skin == "ninja":
+                # Red headband
+                pygame.draw.rect(bird_surf, (180, 30, 30), (cx - 14, cy - 9, 26, 4))
+                pygame.draw.polygon(bird_surf, (180, 30, 30), [(cx - 14, cy - 7), (cx - 22, cy - 4), (cx - 20, cy - 9)])
+                pygame.draw.polygon(bird_surf, (180, 30, 30), [(cx - 14, cy - 7), (cx - 24, cy - 10), (cx - 19, cy - 12)])
+            elif skin == "mech":
+                # Panel cross lines
+                pygame.draw.line(bird_surf, outline_color, (cx - 10, cy), (cx + 10, cy), 1)
+                pygame.draw.line(bird_surf, outline_color, (cx, cy - 10), (cx, cy + 10), 1)
+            elif skin == "phoenix":
+                # Flame feathers on head top
+                pygame.draw.polygon(bird_surf, (255, 120, 0), [(cx - 8, cy - 14), (cx - 18, cy - 24), (cx - 2, cy - 15)])
+                pygame.draw.polygon(bird_surf, (220, 45, 30), [(cx - 2, cy - 15), (cx - 8, cy - 28), (cx + 4, cy - 15)])
+            elif skin == "sigma":
+                # Cool black shades / sunglasses
+                pygame.draw.polygon(bird_surf, (10, 10, 10), [(cx + 2, cy - 8), (cx + 14, cy - 8), (cx + 12, cy - 2), (cx + 4, cy - 2)])
+                pygame.draw.polygon(bird_surf, (200, 200, 200), [(cx + 2, cy - 8), (cx + 14, cy - 8), (cx + 12, cy - 2), (cx + 4, cy - 2)], 1)
+                pygame.draw.line(bird_surf, (200, 200, 200), (cx + 2, cy - 6), (cx - 6, cy - 6), 1)
+                
+            if skin in ["classic", "phoenix", "sigma"] and not (mode == "night" and skin == "classic"):
+                # Belly highlight
+                pygame.draw.arc(bird_surf, (255, 255, 255), (cx - self.radius + 3, cy - 2, self.radius * 2 - 6, self.radius), 0, math.pi, 2)
+                
+            # 3. Eye
+            eye_x = cx + 6
+            eye_y = cy - 5
+            if skin == "mech":
+                # Red glowing visor
+                pygame.draw.rect(bird_surf, (0, 240, 255), (eye_x - 3, eye_y - 2, 8, 4), 0, 1)
+                pygame.draw.rect(bird_surf, outline_color, (eye_x - 3, eye_y - 2, 8, 4), 1, 1)
+            else:
+                pygame.draw.circle(bird_surf, (255, 255, 255), (eye_x, eye_y), 5)
+                pygame.draw.circle(bird_surf, outline_color, (eye_x, eye_y), 5, 1)
+                pygame.draw.circle(bird_surf, (0, 0, 0), (eye_x + 1, eye_y), 2)
+                if skin not in ["ninja", "sigma"]:
+                    pygame.draw.circle(bird_surf, (255, 255, 255), (eye_x - 1, eye_y - 1), 1)
+                
+            # 4. Wing
+            wing_w = 13
+            wing_h = 10
+            pygame.draw.ellipse(bird_surf, wing_color, (cx - 11, wing_y - wing_h // 2, wing_w, wing_h))
+            pygame.draw.ellipse(bird_surf, outline_color, (cx - 11, wing_y - wing_h // 2, wing_w, wing_h), 1 if (mode == "night" and skin == "classic") else 2)
         
         # 5. Santa Hat in Winter Mode!
         if mode == "winter":
@@ -1509,6 +1562,7 @@ class Game:
         self.show_leaderboard = False
         self.show_skins_shop = False
         self.show_about = False
+        self.show_achievements = False
         
         # Text input controller
         self.login_input = ""
@@ -1571,6 +1625,17 @@ class Game:
 
     def load_player_profile(self):
         self.profile = load_profile_data(self.username)
+        # Ensure achievements and keys exist
+        if "achievements" not in self.profile:
+            self.profile["achievements"] = {
+                "first_flight": False,
+                "coin_collector": 0,
+                "insane_pilot": False,
+                "skin_enthusiast": False
+            }
+        if "last_daily_claim" not in self.profile:
+            self.profile["last_daily_claim"] = 0.0
+            
         # Synchronize/initialize high score with leaderboard if profile is new or lower
         leaderboard_hs = self.get_player_high_score()
         if leaderboard_hs > self.profile["high_score"]:
@@ -1670,6 +1735,12 @@ class Game:
         self.particles = []
         self.score_popups = []
         self.first_flap = False
+        
+        # Unlock first flight achievement if not unlocked
+        if not self.profile["achievements"].get("first_flight", False):
+            self.profile["achievements"]["first_flight"] = True
+            save_profile_data(self.username, self.profile)
+            
         self.powerups = []
         self.coins = []
         self.session_coins = 0
@@ -1706,6 +1777,24 @@ class Game:
         self.profile["coins"] += self.session_coins
         if self.score > self.profile["high_score"]:
             self.profile["high_score"] = self.score
+            
+        # Update Achievements
+        if "achievements" not in self.profile:
+            self.profile["achievements"] = {
+                "first_flight": True,
+                "coin_collector": 0,
+                "insane_pilot": False,
+                "skin_enthusiast": False
+            }
+        self.profile["achievements"]["coin_collector"] = self.profile["achievements"].get("coin_collector", 0) + self.session_coins
+        if self.score >= 25:
+            self.profile["achievements"]["insane_pilot"] = True
+            
+        # Check skin enthusiast
+        all_skins = ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]
+        if all(s in self.profile.get("unlocked_skins", []) for s in all_skins):
+            self.profile["achievements"]["skin_enthusiast"] = True
+            
         save_profile_data(self.username, self.profile)
         
         
@@ -1832,7 +1921,6 @@ class Game:
                             return
 
                         if self.show_leaderboard:
-                            # Close leaderboard modal check
                             card_h = 320
                             card_y = HEIGHT // 2 - card_h // 2 - 30
                             close_btn = pygame.Rect(WIDTH // 2 - 60, card_y + card_h - 45, 120, 32)
@@ -1842,7 +1930,7 @@ class Game:
                             
                         if self.show_skins_shop:
                             card_w = 380
-                            card_h = 360
+                            card_h = 490
                             card_x = WIDTH // 2 - card_w // 2
                             card_y = HEIGHT // 2 - card_h // 2 - 20
                             
@@ -1851,7 +1939,7 @@ class Game:
                                 self.show_skins_shop = False
                                 return
                                 
-                            for i, skin_name in enumerate(["classic", "ninja", "mech", "phoenix"]):
+                            for i, skin_name in enumerate(["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]):
                                 cost = 0
                                 if skin_name == "classic": unlocked = True
                                 elif skin_name == "ninja":
@@ -1863,6 +1951,12 @@ class Game:
                                 elif skin_name == "phoenix":
                                     cost = 150
                                     unlocked = (skin_name in self.profile["unlocked_skins"]) or (self.high_score >= 20)
+                                elif skin_name == "sigma":
+                                    cost = 100
+                                    unlocked = (skin_name in self.profile["unlocked_skins"]) or (self.high_score >= 15)
+                                elif skin_name == "skibidi":
+                                    cost = 200
+                                    unlocked = (skin_name in self.profile["unlocked_skins"]) or (self.high_score >= 25)
                                 
                                 row_y = card_y + 70 + i * 62
                                 btn_rect = pygame.Rect(card_x + card_w - 95, row_y + 12, 80, 28)
@@ -1876,6 +1970,14 @@ class Game:
                                     if self.profile["coins"] >= cost and btn_rect.collidepoint(vmx, vmy):
                                         self.profile["coins"] -= cost
                                         self.profile["unlocked_skins"].append(skin_name)
+                                        
+                                        # Check skin enthusiast
+                                        all_skins = ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]
+                                        if all(s in self.profile.get("unlocked_skins", []) for s in all_skins):
+                                            if "achievements" not in self.profile:
+                                                self.profile["achievements"] = {}
+                                            self.profile["achievements"]["skin_enthusiast"] = True
+                                            
                                         save_profile_data(self.username, self.profile)
                                         self.equipped_skin = skin_name
                                         save_equipped_skin(skin_name)
@@ -1883,43 +1985,59 @@ class Game:
                                             powerup_pickup_sfx.play()
                                         return
                             return
-                            
-                        # About Click (top-right)
-                        about_btn = pygame.Rect(WIDTH - 115, 15, 100, 35)
-                        if about_btn.collidepoint(vmx, vmy):
-                            self.show_about = True
+
+                        if self.show_achievements:
+                            card_w = 400
+                            card_h = 360
+                            card_y = HEIGHT // 2 - card_h // 2 - 30
+                            close_btn = pygame.Rect(WIDTH // 2 - 60, card_y + card_h - 45, 120, 32)
+                            if close_btn.collidepoint(vmx, vmy):
+                                self.show_achievements = False
                             return
 
-                        # Profile Click (top bar)
-                        prof_btn = pygame.Rect(15, 15, 160, 35)
+                        # --- Main Menu Active Click Elements ---
+                        # 1. Plus button inside Coin Pill (open shop)
+                        plus_btn = pygame.Rect(115, 15, 40, 35)
+                        if plus_btn.collidepoint(vmx, vmy):
+                            self.show_skins_shop = True
+                            return
+                            
+                        # 2. Profile Pill (edit profile)
+                        prof_btn = pygame.Rect(WIDTH // 2 - 90, 15, 180, 35)
                         if prof_btn.collidepoint(vmx, vmy):
                             self.login_input = self.username
                             self.state = "LOGIN"
                             return
                             
-                        # Leaderboard Click
-                        lead_btn = pygame.Rect(32, 645, 135, 40)
-                        if lead_btn.collidepoint(vmx, vmy):
-                            self.show_leaderboard = True
-                            return
-                            
-                        # Skins Click
-                        skins_btn = pygame.Rect(182, 645, 135, 40)
-                        if skins_btn.collidepoint(vmx, vmy):
-                            self.show_skins_shop = True
-                            return
-                            
-                        # Volume Click
-                        vol_btn = pygame.Rect(332, 645, 135, 40)
+                        # 3. Volume Button (top-right)
+                        vol_btn = pygame.Rect(WIDTH - 55, 15, 40, 35)
                         if vol_btn.collidepoint(vmx, vmy):
                             self.cycle_volume()
                             return
                             
-                        # Mode Buttons
-                        btn_forest = pygame.Rect(40, 520, 200, 45)
-                        btn_synth = pygame.Rect(260, 520, 200, 45)
-                        btn_city = pygame.Rect(40, 580, 200, 45)
-                        btn_winter = pygame.Rect(260, 580, 200, 45)
+                        # 4. Daily Reward Card (claim reward)
+                        daily_btn = pygame.Rect(270, 200, 190, 80)
+                        if daily_btn.collidepoint(vmx, vmy):
+                            elapsed = time.time() - self.profile.get("last_daily_claim", 0.0)
+                            if elapsed >= 86400:
+                                self.profile["coins"] += 50
+                                self.profile["last_daily_claim"] = time.time()
+                                save_profile_data(self.username, self.profile)
+                                if point_sfx:
+                                    point_sfx.play()
+                            return
+                            
+                        # 5. Primary PLAY Button
+                        play_btn = pygame.Rect(WIDTH // 2 - 120, 320, 240, 60)
+                        if play_btn.collidepoint(vmx, vmy):
+                            self.start_game()
+                            return
+
+                        # 6. Mode Buttons
+                        btn_forest = pygame.Rect(40, 460, 200, 45)
+                        btn_synth = pygame.Rect(260, 460, 200, 45)
+                        btn_city = pygame.Rect(40, 515, 200, 45)
+                        btn_winter = pygame.Rect(260, 515, 200, 45)
                         
                         if btn_forest.collidepoint(vmx, vmy):
                             self.mode = "normal"
@@ -1929,22 +2047,58 @@ class Game:
                             self.mode = "city"
                         elif btn_winter.collidepoint(vmx, vmy):
                             self.mode = "winter"
-                        else:
-                            # click anywhere else triggers start
-                            self.perform_action()
+                            
+                        # 7. Footer Buttons
+                        lead_btn = pygame.Rect(32, 630, 100, 45)
+                        skins_btn = pygame.Rect(144, 630, 100, 45)
+                        ach_btn = pygame.Rect(256, 630, 112, 45)
+                        about_btn = pygame.Rect(380, 630, 88, 45)
+                        
+                        if lead_btn.collidepoint(vmx, vmy):
+                            self.show_leaderboard = True
+                        elif skins_btn.collidepoint(vmx, vmy):
+                            self.show_skins_shop = True
+                        elif ach_btn.collidepoint(vmx, vmy):
+                            self.show_achievements = True
+                        elif about_btn.collidepoint(vmx, vmy):
+                            self.show_about = True
                             
                     elif self.state == "LOGIN":
-                        # Confirm or Cancel buttons
-                        btn_back = pygame.Rect(40, HEIGHT - 100, 160, 45)
-                        btn_confirm = pygame.Rect(300, HEIGHT - 100, 160, 45)
+                        # Virtual Keyboard input or Cancel/Save clicks
+                        card_h = 480
+                        card_y = HEIGHT // 2 - card_h // 2 - 30
+                        card_w = 420
+                        card_x = WIDTH // 2 - card_w // 2
+                        
+                        btn_back = pygame.Rect(card_x + 30, card_y + card_h - 60, 160, 40)
+                        btn_confirm = pygame.Rect(card_x + card_w - 190, card_y + card_h - 60, 160, 40)
+                        
                         if btn_back.collidepoint(vmx, vmy):
                             self.state = "START"
+                            if point_sfx: point_sfx.play()
                         elif btn_confirm.collidepoint(vmx, vmy):
                             if self.login_input.strip():
                                 self.username = self.login_input.strip()[:12]
                                 save_username(self.username)
                                 self.load_player_profile()
                             self.state = "START"
+                            if point_sfx: point_sfx.play()
+                        else:
+                            # Check virtual keyboard buttons
+                            for k in self.get_keyboard_keys():
+                                if k['rect'].collidepoint(vmx, vmy):
+                                    if point_sfx:
+                                        point_sfx.play()
+                                    if k['text'] == 'BACK':
+                                        self.login_input = self.login_input[:-1]
+                                    elif k['text'] == 'SPACE':
+                                        if len(self.login_input) < 12:
+                                            self.login_input += " "
+                                    else:
+                                        if len(self.login_input) < 12:
+                                            self.login_input += k['text']
+                                    break
+                                    
                     elif self.state == "GAMEOVER":
                         card_h = 245
                         card_y = HEIGHT // 2 - card_h // 2 - 40
@@ -2209,6 +2363,11 @@ class Game:
                     elif self.equipped_skin == "phoenix":
                         fc = random.choice([(255, 100, 30, 200), (255, 200, 0, 200)])
                         self.particles.append(Particle(tx, ty, -2.0 * speed_multiplier, (-0.6 - random.uniform(0.0, 0.5)) * speed_multiplier, fc, random.uniform(3, 4.5), 15))
+                    elif self.equipped_skin == "sigma":
+                        fc = random.choice([(255, 215, 0, 220), (255, 255, 255, 180)])
+                        self.particles.append(Particle(tx, ty, -2.4 * speed_multiplier, random.uniform(-0.4, 0.4) * speed_multiplier, fc, random.uniform(2.5, 4.5), 16))
+                    elif self.equipped_skin == "skibidi":
+                        self.particles.append(Particle(tx, ty, -2.0 * speed_multiplier, random.uniform(-0.5, 0.5) * speed_multiplier, (255, 255, 255, 210), random.uniform(3.5, 5.5), 14, shape='square'))
                 
                 # Pipes updates
                 for pipe in self.pipes:
@@ -2592,6 +2751,12 @@ class Game:
         overlay.fill((15, 15, 25, 90))
         surface.blit(overlay, (0, 0))
         
+        # Get theme co    def draw_start_screen(self, surface):
+        # Semi-transparent overlay
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((15, 15, 25, 90))
+        surface.blit(overlay, (0, 0))
+        
         # Get theme color
         theme_color = (46, 125, 50)
         if self.mode == "night":
@@ -2601,90 +2766,162 @@ class Game:
         elif self.mode == "winter":
             theme_color = (140, 175, 205)
 
-        # Profile Top Bar
-        pygame.draw.rect(surface, (30, 30, 45, 200), (15, 15, 160, 35), 0, 6)
-        pygame.draw.rect(surface, theme_color, (15, 15, 160, 35), 1, 6)
+        # ---------------- 1. TOP HEADER PANEL ----------------
+        # A. Coin Counter Pill (top-left)
+        pygame.draw.rect(surface, (30, 30, 45, 200), (15, 15, 135, 35), 0, 6)
+        pygame.draw.rect(surface, (255, 215, 0), (15, 15, 135, 35), 1, 6)
+        # Gold Coin Circle Icon
+        pygame.draw.circle(surface, (255, 215, 0), (32, 32), 10)
+        pygame.draw.circle(surface, (255, 180, 0), (32, 32), 10, 1)
+        pygame.draw.circle(surface, (255, 255, 255), (30, 30), 2) # shine
+        # Coin Count text
+        coins_text_surf = font_bold_small.render(str(self.profile['coins']), True, (255, 255, 255))
+        surface.blit(coins_text_surf, (48, 22))
+        # Green '+' button inside coin pill
+        plus_btn_rect = pygame.Rect(118, 20, 24, 24)
+        pygame.draw.rect(surface, (46, 125, 50), plus_btn_rect, 0, 4)
+        plus_lbl = font_bold_small.render("+", True, (255, 255, 255))
+        surface.blit(plus_lbl, (plus_btn_rect.centerx - plus_lbl.get_width() // 2, plus_btn_rect.centery - plus_lbl.get_height() // 2 - 1))
+
+        # B. Profile Pill (top-center)
+        prof_pill = pygame.Rect(WIDTH // 2 - 90, 15, 180, 35)
+        pygame.draw.rect(surface, (30, 30, 45, 200), prof_pill, 0, 6)
+        pygame.draw.rect(surface, theme_color, prof_pill, 1, 6)
+        # Username text
         name_lbl = font_bold_small.render(self.username, True, (255, 255, 255))
-        change_lbl = font_small.render("Change Profile", True, theme_color)
-        surface.blit(name_lbl, (25, 22))
-        surface.blit(change_lbl, (185, 23))
+        # Pencil edit icon (simple lines)
+        px, py = prof_pill.right - 25, 22
+        pygame.draw.polygon(surface, theme_color, [(px, py + 10), (px + 4, py + 10), (px + 10, py + 4), (px + 6, py)])
+        surface.blit(name_lbl, (prof_pill.x + 15, 22))
+
+        # C. Speaker / Volume Button (top-right)
+        vol_btn_rect = pygame.Rect(WIDTH - 55, 15, 40, 35)
+        pygame.draw.rect(surface, (30, 30, 45, 200), vol_btn_rect, 0, 6)
+        pygame.draw.rect(surface, theme_color, vol_btn_rect, 1, 6)
+        # Draw Speaker Polygon
+        spx, spy = WIDTH - 43, 22
+        pygame.draw.rect(surface, (255, 255, 255), (spx, spy + 6, 6, 8))
+        pygame.draw.polygon(surface, (255, 255, 255), [(spx + 6, spy + 6), (spx + 13, spy), (spx + 13, spy + 20), (spx + 6, spy + 14)])
+        # Sound waves lines based on volume level
+        if self.volume_level > 0.0:
+            pygame.draw.arc(surface, (255, 255, 255), (spx + 10, spy + 3, 10, 14), -math.pi/3, math.pi/3, 1)
+        if self.volume_level > 0.2:
+            pygame.draw.arc(surface, (255, 255, 255), (spx + 14, spy - 1, 10, 22), -math.pi/3, math.pi/3, 1)
+
+        # ---------------- 2. TITLE LOGO PANEL ----------------
+        # Floating/bouncing animation title text
+        bounce = int(math.sin(pygame.time.get_ticks() * 0.005) * 6)
+        title_text = "FLAPPER ARCADE"
+        glow_c = theme_color
         
-        # About Button (top-right)
-        about_btn = pygame.Rect(WIDTH - 115, 15, 100, 35)
-        pygame.draw.rect(surface, (30, 30, 45, 200), about_btn, 0, 6)
-        pygame.draw.rect(surface, theme_color, about_btn, 1, 6)
-        about_lbl = font_bold_small.render("About", True, (255, 255, 255))
-        surface.blit(about_lbl, (about_btn.centerx - about_lbl.get_width() // 2, about_btn.centery - about_lbl.get_height() // 2))
-        
-        # Title Card
-        title_text = "FOREST FLAPPER"
-        glow_c = (46, 125, 50)
-        
-        if self.mode == "night":
-            title_text = "NEON ARCADE"
-            glow_c = (255, 0, 180)
-        elif self.mode == "city":
-            title_text = "METRO FLAPPER"
-            glow_c = (230, 90, 40)
-        elif self.mode == "winter":
-            title_text = "WINTER FLAPPER"
-            glow_c = (140, 175, 205)
-            
         glow_surf = font_title.render(title_text, True, glow_c)
         main_surf = font_title.render(title_text, True, (255, 255, 255))
         tx = WIDTH // 2 - main_surf.get_width() // 2
-        ty = HEIGHT // 4 - 35
+        ty = HEIGHT // 4 - 55 + bounce
         
         for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2), (-1, -1), (1, 1)]:
             surface.blit(glow_surf, (tx + dx, ty + dy))
         surface.blit(main_surf, (tx, ty))
+
+        # ---------------- 3. DASHBOARD STAT CARDS ----------------
+        # A. Best Score Card (left)
+        card_l = pygame.Rect(40, 200, 190, 80)
+        pygame.draw.rect(surface, (20, 20, 30, 200), card_l, 0, 8)
+        pygame.draw.rect(surface, (255, 215, 0), card_l, 2, 8)
+        # Gold Trophy Icon
+        tcx, tcy = card_l.x + 30, card_l.centery
+        pygame.draw.polygon(surface, (255, 215, 0), [(tcx-8, tcy-14), (tcx+8, tcy-14), (tcx+12, tcy-4), (tcx-12, tcy-4)])
+        pygame.draw.polygon(surface, (255, 215, 0), [(tcx-3, tcy-4), (tcx+3, tcy-4), (tcx+3, tcy+4), (tcx-3, tcy+4)])
+        pygame.draw.rect(surface, (255, 215, 0), (tcx-8, tcy+4, 16, 4))
+        # Best text
+        best_lbl = font_small.render("BEST SCORE", True, (170, 170, 180))
+        surface.blit(best_lbl, (card_l.x + 60, card_l.y + 16))
+        score_val = font_score.render(str(self.high_score), True, (255, 255, 255))
+        surface.blit(score_val, (card_l.x + 60, card_l.y + 34))
+
+        # B. Daily Reward Card (right)
+        card_r = pygame.Rect(270, 200, 190, 80)
+        pygame.draw.rect(surface, (20, 20, 30, 200), card_r, 0, 8)
         
-        # Pulsing Start Text
-        pulse = int(127 + 127 * math.sin(pygame.time.get_ticks() * 0.007))
-        pulse_c = (pulse, 255, pulse) if self.mode != "night" else (0, pulse, 255)
-        inst_surf = font_ui.render("Press SPACE or CLICK to Fly", True, pulse_c)
-        surface.blit(inst_surf, (WIDTH // 2 - inst_surf.get_width() // 2, HEIGHT // 2 - 20))
+        # Gift Box Icon
+        gbx, gby = card_r.x + 30, card_r.centery
+        pygame.draw.rect(surface, (220, 60, 60), (gbx - 12, gby - 6, 24, 18), 0, 2) # box base
+        pygame.draw.rect(surface, (255, 215, 0), (gbx - 2, gby - 6, 4, 18)) # ribbon vert
+        pygame.draw.rect(surface, (255, 215, 0), (gbx - 12, gby + 1, 24, 4)) # ribbon horiz
+        pygame.draw.circle(surface, (255, 215, 0), (gbx - 4, gby - 8), 4, 2) # bow L
+        pygame.draw.circle(surface, (255, 215, 0), (gbx + 4, gby - 8), 4, 2) # bow R
         
-        # High score display
-        hs_surf = font_ui.render(f"Your Best: {self.high_score}", True, (255, 230, 100))
-        surface.blit(hs_surf, (WIDTH // 2 - hs_surf.get_width() // 2, HEIGHT // 2 + 25))
+        # Check Daily Claim state
+        elapsed = time.time() - self.profile.get("last_daily_claim", 0.0)
+        daily_lbl = font_small.render("DAILY REWARD", True, (170, 170, 180))
+        surface.blit(daily_lbl, (card_r.x + 60, card_r.y + 16))
         
-        # Lifetime coins display
-        coins_surf = font_ui.render(f"Coins: {self.profile['coins']}", True, (255, 215, 0))
-        surface.blit(coins_surf, (WIDTH // 2 - coins_surf.get_width() // 2, HEIGHT // 2 + 65))
+        if elapsed >= 86400: # 24 hours
+            pygame.draw.rect(surface, (255, 180, 0), card_r, 2, 8)
+            # Pulse CLAIM text
+            pulse = int(127 + 127 * math.sin(pygame.time.get_ticks() * 0.012))
+            claim_c = (pulse, 255, pulse)
+            claim_val = font_ui.render("CLAIM!", True, claim_c)
+            surface.blit(claim_val, (card_r.x + 60, card_r.y + 36))
+        else:
+            pygame.draw.rect(surface, (80, 80, 90), card_r, 2, 8)
+            # Ticking countdown timer
+            rem = int(86400 - elapsed)
+            hours = rem // 3600
+            mins = (rem % 3600) // 60
+            secs = rem % 60
+            timer_str = f"{hours:02d}:{mins:02d}:{secs:02d}"
+            timer_val = font_ui.render(timer_str, True, (255, 220, 100))
+            surface.blit(timer_val, (card_r.x + 60, card_r.y + 36))
+
+        # ---------------- 4. PRIMARY PLAY BUTTON ----------------
+        play_btn = pygame.Rect(WIDTH // 2 - 120, 320, 240, 60)
+        # Pulsing gold/orange active glow outline
+        pulse_scale = 1.0 + 0.03 * math.sin(pygame.time.get_ticks() * 0.006)
+        pw = int(play_btn.width * pulse_scale)
+        ph = int(play_btn.height * pulse_scale)
+        px = play_btn.centerx - pw // 2
+        py = play_btn.centery - ph // 2
         
-        # Mode Selection Header
-        mode_hdr = font_bold_small.render("--- SELECT ARCADE MODE ---", True, (230, 230, 230))
-        surface.blit(mode_hdr, (WIDTH // 2 - mode_hdr.get_width() // 2, 480))
+        pygame.draw.rect(surface, (255, 140, 0, 120), (px, py, pw, ph), 4, 10)
+        pygame.draw.rect(surface, (255, 160, 20), play_btn, 0, 8)
+        pygame.draw.rect(surface, (255, 255, 255), play_btn, 2, 8)
         
-        # 4 Mode buttons
-        btn_forest = pygame.Rect(40, 520, 200, 45)
-        btn_synth = pygame.Rect(260, 520, 200, 45)
-        btn_city = pygame.Rect(40, 580, 200, 45)
-        btn_winter = pygame.Rect(260, 580, 200, 45)
+        # Play Triangle Icon
+        p_tri = [(play_btn.x + 65, play_btn.centery - 12), 
+                 (play_btn.x + 85, play_btn.centery), 
+                 (play_btn.x + 65, play_btn.centery + 12)]
+        pygame.draw.polygon(surface, (255, 255, 255), p_tri)
+        pygame.draw.polygon(surface, (200, 100, 0), p_tri, 2)
+        
+        play_lbl = font_title.render("PLAY", True, (255, 255, 255))
+        surface.blit(play_lbl, (play_btn.x + 105, play_btn.centery - play_lbl.get_height() // 2))
+
+        # ---------------- 5. MODE SELECTOR PANEL ----------------
+        mode_hdr = font_bold_small.render("--- SELECT LEVEL THEME ---", True, (200, 200, 200))
+        surface.blit(mode_hdr, (WIDTH // 2 - mode_hdr.get_width() // 2, 432))
+        
+        # 4 Level Buttons
+        btn_forest = pygame.Rect(40, 460, 200, 45)
+        btn_synth = pygame.Rect(260, 460, 200, 45)
+        btn_city = pygame.Rect(40, 515, 200, 45)
+        btn_winter = pygame.Rect(260, 515, 200, 45)
         
         self.draw_button(surface, btn_forest, "Forest (Day-Night)", self.mode == "normal", (46, 125, 50))
         self.draw_button(surface, btn_synth, "Synthwave Night", self.mode == "night", (255, 0, 180))
         self.draw_button(surface, btn_city, "City Metropolis", self.mode == "city", (220, 95, 80))
         self.draw_button(surface, btn_winter, "Winter Snow", self.mode == "winter", (140, 175, 205))
-        
-        # Leaderboard & Volume buttons side-by-side
-        lead_btn = pygame.Rect(32, 645, 135, 40)
-        skins_btn = pygame.Rect(182, 645, 135, 40)
-        vol_btn = pygame.Rect(332, 645, 135, 40)
+
+        # ---------------- 6. FOOTER NAVIGATION BAR ----------------
+        lead_btn = pygame.Rect(32, 630, 100, 45)
+        skins_btn = pygame.Rect(144, 630, 100, 45)
+        ach_btn = pygame.Rect(256, 630, 112, 45)
+        about_btn = pygame.Rect(380, 630, 88, 45)
         
         self.draw_button(surface, lead_btn, "Trophies", False, (100, 210, 100))
         self.draw_button(surface, skins_btn, "Skins", False, (100, 210, 100))
-        
-        # Dynamic volume button text
-        vol_text = "Vol: 50%"
-        if self.volume_level == 0.0:
-            vol_text = "Muted"
-        elif self.volume_level == 0.2:
-            vol_text = "Vol: 20%"
-        elif self.volume_level == 1.0:
-            vol_text = "Vol: 100%"
-        self.draw_button(surface, vol_btn, vol_text, False, (100, 210, 100))
+        self.draw_button(surface, ach_btn, "Badges", False, (100, 210, 100))
+        self.draw_button(surface, about_btn, "About", False, (100, 210, 100))
         
         # Show Leaderboard Modal if active
         if self.show_leaderboard:
@@ -2693,6 +2930,10 @@ class Game:
         # Show Skins Modal if active
         if self.show_skins_shop:
             self.draw_skins_modal(surface)
+ 
+        # Show Achievements Modal if active
+        if self.show_achievements:
+            self.draw_achievements_modal(surface)
 
         # Show About Modal if active
         if self.show_about:
@@ -2832,7 +3073,7 @@ class Game:
 
     def draw_skins_modal(self, surface):
         card_w = 380
-        card_h = 360
+        card_h = 490
         card_x = WIDTH // 2 - card_w // 2
         card_y = HEIGHT // 2 - card_h // 2 - 20
         
@@ -2848,7 +3089,7 @@ class Game:
         coins_txt = font_bold_small.render(f"Your Coins: {self.profile['coins']}", True, (255, 215, 0))
         surface.blit(coins_txt, (WIDTH // 2 - coins_txt.get_width() // 2, card_y + 44))
         
-        for i, skin_name in enumerate(["classic", "ninja", "mech", "phoenix"]):
+        for i, skin_name in enumerate(["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]):
             row_y = card_y + 70 + i * 62
             
             # Row container
@@ -2879,11 +3120,30 @@ class Game:
                 pygame.draw.circle(surface, (255, 255, 255), (bx + 4, by - 3), 3)
                 pygame.draw.circle(surface, (0, 0, 0), (bx + 5, by - 3), 1)
                 pygame.draw.polygon(surface, (255, 220, 0), [(bx + 9, by - 2), (bx + 15, by), (bx + 9, by + 4)])
+            elif skin_name == "sigma":
+                pygame.draw.circle(surface, (60, 60, 65), (bx, by), br)
+                pygame.draw.rect(surface, (10, 10, 10), (bx, by - 4, 11, 4), 0, 1)
+                pygame.draw.rect(surface, (200, 200, 200), (bx, by - 4, 11, 4), 1, 1)
+                pygame.draw.line(surface, (200, 200, 200), (bx, by - 2), (bx - 6, by - 2), 1)
+                pygame.draw.polygon(surface, (255, 120, 0), [(bx + 9, by - 2), (bx + 14, by), (bx + 9, by + 3)])
+            elif skin_name == "skibidi":
+                pygame.draw.ellipse(surface, (230, 230, 240), (bx - br, by - 3, br * 2, br + 5))
+                pygame.draw.rect(surface, (255, 255, 255), (bx - br - 2, by - br, 6, br * 2))
+                pygame.draw.circle(surface, (255, 200, 180), (bx + 2, by - 5), 7)
+                pygame.draw.circle(surface, (0, 0, 0), (bx + 4, by - 6), 1)
+                pygame.draw.polygon(surface, (255, 100, 0), [(bx + 8, by - 6), (bx + 12, by - 5), (bx + 8, by - 4)])
                 
             pygame.draw.circle(surface, (20, 20, 20), (bx, by), br, 1)
             
             # Names
-            names = {"classic": "Classic Yellow", "ninja": "Midnight Ninja", "mech": "Cyber-Mech", "phoenix": "Cosmic Phoenix"}
+            names = {
+                "classic": "Classic Yellow", 
+                "ninja": "Midnight Ninja", 
+                "mech": "Cyber-Mech", 
+                "phoenix": "Cosmic Phoenix",
+                "sigma": "Sigma Gigachad",
+                "skibidi": "Skibidi Toilet"
+            }
             name_surf = font_bold_small.render(names[skin_name], True, (255, 255, 255))
             surface.blit(name_surf, (card_x + 65, row_y + 10))
             
@@ -2906,9 +3166,25 @@ class Game:
                 high_score_met = self.high_score >= 20
                 req_txt = "Unlock: Score 20+"
                 cost = 150
+            elif skin_name == "sigma":
+                high_score_met = self.high_score >= 15
+                req_txt = "Unlock: Score 15+"
+                cost = 100
+            elif skin_name == "skibidi":
+                high_score_met = self.high_score >= 25
+                req_txt = "Unlock: Score 25+"
+                cost = 200
                 
             if high_score_met and skin_name not in self.profile["unlocked_skins"]:
                 self.profile["unlocked_skins"].append(skin_name)
+                
+                # Check skin enthusiast
+                all_skins = ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]
+                if all(s in self.profile.get("unlocked_skins", []) for s in all_skins):
+                    if "achievements" not in self.profile:
+                        self.profile["achievements"] = {}
+                    self.profile["achievements"]["skin_enthusiast"] = True
+                    
                 save_profile_data(self.username, self.profile)
                 
             unlocked = skin_name in self.profile["unlocked_skins"]
@@ -2948,22 +3224,22 @@ class Game:
         surface.blit(sky_cache["synthwave"], (0, 0))
         
         # Card container
-        card_w = 400
-        card_h = 280
+        card_w = 420
+        card_h = 480
         card_x = WIDTH // 2 - card_w // 2
-        card_y = HEIGHT // 2 - card_h // 2 - 50
+        card_y = HEIGHT // 2 - card_h // 2 - 30
         
         pygame.draw.rect(surface, (100, 210, 100), (card_x - 2, card_y - 2, card_w + 4, card_h + 4), 0, 10)
         pygame.draw.rect(surface, (25, 25, 35), (card_x, card_y, card_w, card_h), 0, 8)
         
         title = font_title.render("EDIT PROFILE", True, (255, 255, 255))
-        surface.blit(title, (WIDTH // 2 - title.get_width() // 2, card_y + 20))
+        surface.blit(title, (WIDTH // 2 - title.get_width() // 2, card_y + 15))
         
         instr = font_small.render("Enter your arcade pilot username:", True, (180, 180, 180))
-        surface.blit(instr, (WIDTH // 2 - instr.get_width() // 2, card_y + 80))
+        surface.blit(instr, (WIDTH // 2 - instr.get_width() // 2, card_y + 50))
         
         # Interactive Textbox
-        box = pygame.Rect(WIDTH // 2 - 150, card_y + 115, 300, 48)
+        box = pygame.Rect(WIDTH // 2 - 150, card_y + 75, 300, 42)
         pygame.draw.rect(surface, (15, 15, 20), box, 0, 6)
         pygame.draw.rect(surface, (100, 210, 100), box, 2, 6)
         
@@ -2974,12 +3250,45 @@ class Game:
         text_surf = font_ui.render(disp_text, True, (255, 255, 255))
         surface.blit(text_surf, (box.x + 15, box.centery - text_surf.get_height() // 2))
         
-        limit_lbl = font_small.render("Limit: 12 alphanumeric characters", True, (130, 130, 130))
-        surface.blit(limit_lbl, (WIDTH // 2 - limit_lbl.get_width() // 2, card_y + 175))
+        limit_lbl = font_small.render("Limit: 12 chars (tapping keys works!)", True, (130, 130, 130))
+        surface.blit(limit_lbl, (WIDTH // 2 - limit_lbl.get_width() // 2, card_y + 122))
         
-        # Back & Confirm buttons
-        btn_back = pygame.Rect(40, HEIGHT - 100, 160, 45)
-        btn_confirm = pygame.Rect(300, HEIGHT - 100, 160, 45)
+        # --- Draw Virtual Keyboard ---
+        # Get vmx, vmy for hover state highlighting
+        mx, my = pygame.mouse.get_pos()
+        if sys.platform == "emscripten":
+            vmx, vmy = mx, my
+        else:
+            scr_w, scr_h = screen.get_size()
+            cur_scale = min(scr_w / WIDTH, scr_h / HEIGHT)
+            cur_dx = (scr_w - WIDTH * cur_scale) // 2
+            cur_dy = (scr_h - HEIGHT * cur_scale) // 2
+            if cur_scale > 0:
+                vmx = (mx - cur_dx) / cur_scale
+                vmy = (my - cur_dy) / cur_scale
+            else:
+                vmx, vmy = mx, my
+
+        for k in self.get_keyboard_keys():
+            k_rect = k['rect']
+            k_text = k['text']
+            
+            # Hover highlight
+            is_hover = k_rect.collidepoint(vmx, vmy)
+            bg_c = (50, 50, 70) if is_hover else (35, 35, 48)
+            border_c = (100, 210, 100) if is_hover else (80, 80, 90)
+            
+            pygame.draw.rect(surface, bg_c, k_rect, 0, 5)
+            pygame.draw.rect(surface, border_c, k_rect, 1, 5)
+            
+            # Render character text centered on key
+            char_font = font_bold_small if len(k_text) > 1 else font_ui
+            txt_surf = char_font.render(k_text, True, (255, 255, 255))
+            surface.blit(txt_surf, (k_rect.centerx - txt_surf.get_width() // 2, k_rect.centery - txt_surf.get_height() // 2))
+            
+        # Back & Confirm buttons inside the modal card container at the bottom
+        btn_back = pygame.Rect(card_x + 30, card_y + card_h - 60, 160, 40)
+        btn_confirm = pygame.Rect(card_x + card_w - 190, card_y + card_h - 60, 160, 40)
         
         self.draw_button(surface, btn_back, "Cancel", False, (220, 70, 70))
         self.draw_button(surface, btn_confirm, "Save Name", True, (100, 210, 100))
@@ -3107,6 +3416,129 @@ class Game:
         # Keyboard shortcut tip
         helper_surf = font_small.render("Keyboard: Press SPACE to Play Again", True, (160, 160, 160))
         surface.blit(helper_surf, (WIDTH // 2 - helper_surf.get_width() // 2, card_y + card_h + 80))
+
+    def get_keyboard_keys(self):
+        # Keyboard grid starts at card_y + 120
+        card_h = 480
+        card_y = HEIGHT // 2 - card_h // 2 - 30
+        
+        # Standard QWERTY layout
+        rows = [
+            ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+            ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+            ["Z", "X", "C", "V", "B", "N", "M"],
+            ["SPACE", "BACK"]
+        ]
+        
+        keys = []
+        key_w, key_h = 32, 34
+        gap = 6
+        
+        # Row 1
+        y1 = card_y + 140
+        w1 = 10 * key_w + 9 * gap
+        start_x1 = WIDTH // 2 - w1 // 2
+        for idx, char in enumerate(rows[0]):
+            keys.append({'text': char, 'rect': pygame.Rect(start_x1 + idx * (key_w + gap), y1, key_w, key_h)})
+            
+        # Row 2
+        y2 = y1 + key_h + gap
+        w2 = 9 * key_w + 8 * gap
+        start_x2 = WIDTH // 2 - w2 // 2
+        for idx, char in enumerate(rows[1]):
+            keys.append({'text': char, 'rect': pygame.Rect(start_x2 + idx * (key_w + gap), y2, key_w, key_h)})
+            
+        # Row 3
+        y3 = y2 + key_h + gap
+        w3 = 7 * key_w + 6 * gap
+        start_x3 = WIDTH // 2 - w3 // 2
+        for idx, char in enumerate(rows[2]):
+            keys.append({'text': char, 'rect': pygame.Rect(start_x3 + idx * (key_w + gap), y3, key_w, key_h)})
+            
+        # Row 4: Space and Backspace
+        y4 = y3 + key_h + gap
+        space_w = 120
+        back_w = 100
+        w4 = space_w + back_w + gap
+        start_x4 = WIDTH // 2 - w4 // 2
+        keys.append({'text': 'SPACE', 'rect': pygame.Rect(start_x4, y4, space_w, key_h)})
+        keys.append({'text': 'BACK', 'rect': pygame.Rect(start_x4 + space_w + gap, y4, back_w, key_h)})
+        
+        return keys
+
+    def draw_achievements_modal(self, surface):
+        # Dark overlay
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((10, 10, 20, 220))
+        surface.blit(overlay, (0, 0))
+        
+        card_w = 400
+        card_h = 360
+        card_x = WIDTH // 2 - card_w // 2
+        card_y = HEIGHT // 2 - card_h // 2 - 30
+        
+        # Outer border
+        theme_color = (255, 180, 0) # Gold theme for achievements/badges
+        pygame.draw.rect(surface, theme_color, (card_x - 3, card_y - 3, card_w + 6, card_h + 6), 0, 12)
+        pygame.draw.rect(surface, (20, 20, 30), (card_x, card_y, card_w, card_h), 0, 10)
+        
+        title = font_title.render("ACHIEVEMENTS", True, theme_color)
+        surface.blit(title, (WIDTH // 2 - title.get_width() // 2, card_y + 15))
+        
+        # Achievements list
+        ach_list = [
+            ("First Flight", "Play 1 round of Flapper Arcade", "first_flight"),
+            ("Coin Collector", "Collect 100 lifetime coins", "coin_collector"),
+            ("Insane Pilot", "Reach Insane difficulty (Score 25+)", "insane_pilot"),
+            ("Skin Enthusiast", "Unlock all 6 skins in the shop", "skin_enthusiast")
+        ]
+        
+        for idx, (name, desc, key) in enumerate(ach_list):
+            ry = card_y + 70 + idx * 56
+            
+            # Row container
+            pygame.draw.rect(surface, (30, 30, 45), (card_x + 15, ry, card_w - 30, 48), 0, 6)
+            
+            # Check status
+            unlocked = False
+            progress_str = ""
+            if key == "coin_collector":
+                count = self.profile.get("achievements", {}).get("coin_collector", 0)
+                unlocked = count >= 100
+                progress_str = f" ({count}/100)"
+            else:
+                unlocked = self.profile.get("achievements", {}).get(key, False)
+                
+            # Draw badge icon slot
+            bx, by = card_x + 35, ry + 24
+            if unlocked:
+                # Green checkmark circle
+                pygame.draw.circle(surface, (46, 125, 50), (bx, by), 12)
+                # Checkmark lines
+                pygame.draw.line(surface, (255, 255, 255), (bx - 5, by), (bx - 1, by + 4), 2)
+                pygame.draw.line(surface, (255, 255, 255), (bx - 1, by + 4), (bx + 5, by - 4), 2)
+            else:
+                # Grey lock circle
+                pygame.draw.circle(surface, (70, 70, 80), (bx, by), 12)
+                # Draw small padlock icon
+                pygame.draw.rect(surface, (200, 200, 200), (bx - 4, by - 2, 8, 7))
+                pygame.draw.arc(surface, (200, 200, 200), (bx - 3, by - 6, 6, 8), 0, math.pi, 2)
+                
+            # Render labels
+            text_color = (255, 255, 255) if unlocked else (130, 130, 135)
+            desc_color = (200, 200, 210) if unlocked else (100, 100, 105)
+            
+            name_surf = font_bold_small.render(name + progress_str, True, text_color)
+            desc_surf = font_small.render(desc, True, desc_color)
+            
+            surface.blit(name_surf, (card_x + 60, ry + 6))
+            surface.blit(desc_surf, (card_x + 60, ry + 25))
+            
+        # Close button
+        close_btn = pygame.Rect(WIDTH // 2 - 60, card_y + card_h - 45, 120, 32)
+        pygame.draw.rect(surface, theme_color, close_btn, 0, 6)
+        c_lbl = font_bold_small.render("Close", True, (20, 20, 30))
+        surface.blit(c_lbl, (close_btn.centerx - c_lbl.get_width() // 2, close_btn.centery - c_lbl.get_height() // 2))
 
 async def main():
     if sys.platform == "emscripten":
