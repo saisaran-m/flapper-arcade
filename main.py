@@ -18,9 +18,9 @@ FPS = 60
 GROUND_HEIGHT = 100
 Y_GROUND = HEIGHT - GROUND_HEIGHT
 
-# Day-Night Cycle Constants (15 seconds per phase, 60 seconds per full cycle)
-SKY_CYCLE_LEN = 3600 # 60 seconds at 60 FPS
-SKY_PHASE_LEN = 900  # 15 seconds per phase (Day, Sunset, Night, Sunrise)
+# Day-Night Cycle Constants (30 seconds per phase, 120 seconds per full cycle)
+SKY_CYCLE_LEN = 7200 # 120 seconds at 60 FPS
+SKY_PHASE_LEN = 1800  # 30 seconds per phase (Day, Sunset, Night, Sunrise)
 
 # Actual Window Dimensions (Starts at default, but is RESIZABLE)
 window_w = WIDTH
