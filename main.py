@@ -1683,10 +1683,14 @@ class Game:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left click
                     mx, my = event.pos
-                    # Map to virtual coords
-                    if scale > 0:
-                        vmx = (mx - dx) / scale
-                        vmy = (my - dy) / scale
+                    # Map to virtual coords dynamically using actual current window size
+                    scr_w, scr_h = screen.get_size()
+                    cur_scale = min(scr_w / WIDTH, scr_h / HEIGHT)
+                    cur_dx = (scr_w - WIDTH * cur_scale) // 2
+                    cur_dy = (scr_h - HEIGHT * cur_scale) // 2
+                    if cur_scale > 0:
+                        vmx = (mx - cur_dx) / cur_scale
+                        vmy = (my - cur_dy) / cur_scale
                     else:
                         vmx, vmy = mx, my
                         
@@ -1704,7 +1708,9 @@ class Game:
 
                         if self.show_leaderboard:
                             # Close leaderboard modal check
-                            close_btn = pygame.Rect(WIDTH // 2 - 60, HEIGHT // 2 - 120 + 240 - 45, 120, 32)
+                            card_h = 320
+                            card_y = HEIGHT // 2 - card_h // 2 - 30
+                            close_btn = pygame.Rect(WIDTH // 2 - 60, card_y + card_h - 45, 120, 32)
                             if close_btn.collidepoint(vmx, vmy):
                                 self.show_leaderboard = False
                             return
@@ -1803,9 +1809,9 @@ class Game:
                             self.perform_action()
                             
                     elif self.state == "LOGIN":
-                        # Confirm or Back buttons
-                        btn_back = pygame.Rect(40, HEIGHT - 80, 120, 40)
-                        btn_confirm = pygame.Rect(340, HEIGHT - 80, 120, 40)
+                        # Confirm or Cancel buttons
+                        btn_back = pygame.Rect(40, HEIGHT - 100, 160, 45)
+                        btn_confirm = pygame.Rect(300, HEIGHT - 100, 160, 45)
                         if btn_back.collidepoint(vmx, vmy):
                             self.state = "START"
                         elif btn_confirm.collidepoint(vmx, vmy):
@@ -1815,8 +1821,10 @@ class Game:
                                 self.load_player_profile()
                             self.state = "START"
                     elif self.state == "GAMEOVER":
-                        btn_restart = pygame.Rect(60, 480, 180, 45)
-                        btn_home = pygame.Rect(260, 480, 180, 45)
+                        card_h = 245
+                        card_y = HEIGHT // 2 - card_h // 2 - 40
+                        btn_restart = pygame.Rect(60, card_y + card_h + 20, 180, 45)
+                        btn_home = pygame.Rect(260, card_y + card_h + 20, 180, 45)
                         if btn_restart.collidepoint(vmx, vmy):
                             self.start_game()
                         elif btn_home.collidepoint(vmx, vmy):
