@@ -234,7 +234,7 @@ def load_equipped_skin():
         try:
             with open(EQUIPPED_SKIN_FILE, "r") as f:
                 skin = f.read().strip()
-                if skin in ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]:
+                if skin in ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi", "mewing", "rizzler"]:
                     return skin
         except:
             pass
@@ -382,6 +382,18 @@ class Particle:
             PARTICLE_TEMP_SURF.fill((0, 0, 0, 0))
             if self.shape == 'circle':
                 pygame.draw.circle(PARTICLE_TEMP_SURF, c, (sz, sz), sz)
+            elif self.shape == 'heart':
+                r_val = max(1, sz // 2)
+                pygame.draw.circle(PARTICLE_TEMP_SURF, c, (sz - r_val, sz - r_val), r_val)
+                pygame.draw.circle(PARTICLE_TEMP_SURF, c, (sz + r_val, sz - r_val), r_val)
+                pygame.draw.polygon(PARTICLE_TEMP_SURF, c, [
+                    (sz - r_val * 2, sz - r_val),
+                    (sz + r_val * 2, sz - r_val),
+                    (sz, sz + sz)
+                ])
+            elif self.shape == 'shh':
+                pygame.draw.circle(PARTICLE_TEMP_SURF, c, (sz, sz + sz // 3), max(1, sz // 2))
+                pygame.draw.rect(PARTICLE_TEMP_SURF, c, (sz - max(1, sz // 4), sz - sz // 2, max(1, sz // 2), sz))
             else:
                 pygame.draw.rect(PARTICLE_TEMP_SURF, c, (0, 0, sz * 2, sz * 2))
             surface.blit(PARTICLE_TEMP_SURF, (int(self.x - self.size), int(self.y - self.size)), (0, 0, sz * 2, sz * 2))
@@ -389,6 +401,18 @@ class Particle:
             p_surf = pygame.Surface((sz * 2, sz * 2), pygame.SRCALPHA)
             if self.shape == 'circle':
                 pygame.draw.circle(p_surf, c, (sz, sz), sz)
+            elif self.shape == 'heart':
+                r_val = max(1, sz // 2)
+                pygame.draw.circle(p_surf, c, (sz - r_val, sz - r_val), r_val)
+                pygame.draw.circle(p_surf, c, (sz + r_val, sz - r_val), r_val)
+                pygame.draw.polygon(p_surf, c, [
+                    (sz - r_val * 2, sz - r_val),
+                    (sz + r_val * 2, sz - r_val),
+                    (sz, sz + sz)
+                ])
+            elif self.shape == 'shh':
+                pygame.draw.circle(p_surf, c, (sz, sz + sz // 3), max(1, sz // 2))
+                pygame.draw.rect(p_surf, c, (sz - max(1, sz // 4), sz - sz // 2, max(1, sz // 2), sz))
             else:
                 pygame.draw.rect(p_surf, c, (0, 0, sz * 2, sz * 2))
             surface.blit(p_surf, (int(self.x - self.size), int(self.y - self.size)))
@@ -995,6 +1019,16 @@ class Bird:
             wing_color = (255, 255, 255)
             beak_color = (255, 100, 0)
             outline_color = (30, 30, 35)
+        elif skin == "mewing":
+            body_color = (120, 120, 130)
+            wing_color = (90, 90, 100)
+            beak_color = (255, 160, 50)
+            outline_color = (25, 25, 30)
+        elif skin == "rizzler":
+            body_color = (255, 20, 100)
+            wing_color = (255, 100, 150)
+            beak_color = (255, 180, 0)
+            outline_color = (40, 10, 20)
         elif mode == "night" and skin == "classic":
             # Neon Cyberpunk bird
             body_color = (255, 0, 180)  # Neon pink
@@ -1051,6 +1085,10 @@ class Bird:
                 pygame.draw.polygon(bird_surf, (10, 10, 10), [(cx + 2, cy - 8), (cx + 14, cy - 8), (cx + 12, cy - 2), (cx + 4, cy - 2)])
                 pygame.draw.polygon(bird_surf, (200, 200, 200), [(cx + 2, cy - 8), (cx + 14, cy - 8), (cx + 12, cy - 2), (cx + 4, cy - 2)], 1)
                 pygame.draw.line(bird_surf, (200, 200, 200), (cx + 2, cy - 6), (cx - 6, cy - 6), 1)
+            elif skin == "mewing":
+                # Defined jawline
+                pygame.draw.polygon(bird_surf, body_color, [(cx - 10, cy + 6), (cx + 4, cy + 13), (cx + 10, cy + 2), (cx, cy)])
+                pygame.draw.polygon(bird_surf, outline_color, [(cx - 10, cy + 6), (cx + 4, cy + 13), (cx + 10, cy + 2)], 2)
                 
             if skin in ["classic", "phoenix", "sigma"] and not (mode == "night" and skin == "classic"):
                 # Belly highlight
@@ -1059,7 +1097,14 @@ class Bird:
             # 3. Eye
             eye_x = cx + 6
             eye_y = cy - 5
-            if skin == "mech":
+            if skin == "mewing":
+                # Squinting eye line
+                pygame.draw.line(bird_surf, outline_color, (eye_x - 3, eye_y), (eye_x + 3, eye_y), 2)
+            elif skin == "rizzler":
+                # Glowing red laser eyes
+                pygame.draw.circle(bird_surf, (255, 0, 0), (eye_x, eye_y), 5)
+                pygame.draw.circle(bird_surf, (255, 255, 255), (eye_x + 1, eye_y - 1), 2)
+            elif skin == "mech":
                 # Red glowing visor
                 pygame.draw.rect(bird_surf, (0, 240, 255), (eye_x - 3, eye_y - 2, 8, 4), 0, 1)
                 pygame.draw.rect(bird_surf, outline_color, (eye_x - 3, eye_y - 2, 8, 4), 1, 1)
@@ -1067,7 +1112,7 @@ class Bird:
                 pygame.draw.circle(bird_surf, (255, 255, 255), (eye_x, eye_y), 5)
                 pygame.draw.circle(bird_surf, outline_color, (eye_x, eye_y), 5, 1)
                 pygame.draw.circle(bird_surf, (0, 0, 0), (eye_x + 1, eye_y), 2)
-                if skin not in ["ninja", "sigma"]:
+                if skin not in ["ninja", "sigma", "mewing", "rizzler"]:
                     pygame.draw.circle(bird_surf, (255, 255, 255), (eye_x - 1, eye_y - 1), 1)
                 
             # 4. Wing
@@ -1087,6 +1132,13 @@ class Bird:
             
         # Rotate
         rotated_surf = pygame.transform.rotate(bird_surf, self.angle)
+        
+        # Scale if shrunken
+        if self.radius == 8:
+            new_w = max(1, int(rotated_surf.get_width() * 0.5))
+            new_h = max(1, int(rotated_surf.get_height() * 0.5))
+            rotated_surf = pygame.transform.scale(rotated_surf, (new_w, new_h))
+            
         new_rect = rotated_surf.get_rect(center=(self.x, self.y))
         
         # Neon glow filter in night mode
@@ -1293,7 +1345,7 @@ class PowerUp:
     def __init__(self, x, y, type):
         self.x = x
         self.y = y
-        self.type = type  # 'shield' or 'slow'
+        self.type = type  # 'shield', 'slow', 'magnet', 'shrink'
         self.radius = 12
         self.angle = 0.0
         self.active = True
@@ -1342,6 +1394,22 @@ class PowerUp:
             
             pygame.draw.polygon(surface, c, [p1, p2, p4, p6, p5, p3])
             pygame.draw.circle(surface, (120, 255, 120), (px, py), r, 1)
+        elif self.type == 'magnet':
+            # Red U-magnet with silver tips
+            pygame.draw.rect(surface, (220, 40, 40), (px - 7, py - 5, 4, 10))
+            pygame.draw.rect(surface, (220, 40, 40), (px + 3, py - 5, 4, 10))
+            pygame.draw.rect(surface, (220, 40, 40), (px - 7, py + 3, 14, 4))
+            pygame.draw.rect(surface, (240, 240, 240), (px - 7, py - 9, 4, 4))
+            pygame.draw.rect(surface, (240, 240, 240), (px + 3, py - 9, 4, 4))
+            pygame.draw.circle(surface, (255, 220, 100), (px, py), r, 1)
+        elif self.type == 'shrink':
+            # Purple potion bottle
+            pygame.draw.circle(surface, (140, 40, 200), (px, py + 3), 7)
+            pygame.draw.circle(surface, (190, 60, 255), (px, py + 3), 5)
+            pygame.draw.rect(surface, (170, 170, 180), (px - 3, py - 5, 6, 5))
+            pygame.draw.rect(surface, (139, 90, 43), (px - 2, py - 8, 4, 3))
+            pygame.draw.circle(surface, (255, 255, 255), (px - 2, py + 1), 2)
+            pygame.draw.circle(surface, (200, 100, 255), (px, py), r, 1)
 
 class Coin:
     def __init__(self, x, y):
@@ -1586,6 +1654,8 @@ class Game:
         self.powerups = []
         self.shield_active = False
         self.slow_timer = 0
+        self.magnet_timer = 0
+        self.shrink_timer = 0
         self.immunity_timer = 0
         
         # Flying Obstacles System
@@ -1682,7 +1752,7 @@ class Game:
         px = pipe.x + pipe.width // 2
         py = pipe.gap_y
         if roll < 0.15:
-            p_type = random.choice(['shield', 'slow'])
+            p_type = random.choice(['shield', 'slow', 'magnet', 'shrink'])
             self.powerups.append(PowerUp(px, py, p_type))
         elif roll < 0.65:  # 0.15 + 0.50
             self.coins.append(Coin(px, py))
@@ -1715,6 +1785,22 @@ class Game:
         else:  # HARD or INSANE
             return base + "_intense"
 
+    def get_pilot_title(self):
+        hs = self.high_score
+        unlocked = self.profile.get("unlocked_skins", [])
+        if "rizzler" in unlocked or hs >= 35:
+            return "Rizz God"
+        elif "mewing" in unlocked or hs >= 30:
+            return "Mewing Master"
+        elif "skibidi" in unlocked or hs >= 25:
+            return "Skibidi Lord"
+        elif "sigma" in unlocked or hs >= 15:
+            return "Sigma Pilot"
+        elif hs >= 10:
+            return "Insane Flyer"
+        else:
+            return "Recruit"
+
     def get_difficulty_tier(self):
         """Returns (tier_name, color, pipe_speed, pipe_gap) based on current score."""
         if self.score >= 25:
@@ -1746,7 +1832,10 @@ class Game:
         self.session_coins = 0
         self.shield_active = False
         self.slow_timer = 0
+        self.magnet_timer = 0
+        self.shrink_timer = 0
         self.immunity_timer = 0
+        self.bird.radius = 16
         self.flying_obstacles = []
         self.current_tier = "EASY"
         self.tier_popup_timer = 0
@@ -1791,7 +1880,7 @@ class Game:
             self.profile["achievements"]["insane_pilot"] = True
             
         # Check skin enthusiast
-        all_skins = ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]
+        all_skins = ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi", "mewing", "rizzler"]
         if all(s in self.profile.get("unlocked_skins", []) for s in all_skins):
             self.profile["achievements"]["skin_enthusiast"] = True
             
@@ -1929,7 +2018,7 @@ class Game:
                             return
                             
                         if self.show_skins_shop:
-                            card_w = 380
+                            card_w = 460
                             card_h = 490
                             card_x = WIDTH // 2 - card_w // 2
                             card_y = HEIGHT // 2 - card_h // 2 - 20
@@ -1939,7 +2028,12 @@ class Game:
                                 self.show_skins_shop = False
                                 return
                                 
-                            for i, skin_name in enumerate(["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]):
+                            for i, skin_name in enumerate(["classic", "ninja", "mech", "phoenix", "sigma", "skibidi", "mewing", "rizzler"]):
+                                col = i % 2
+                                row = i // 2
+                                col_x = card_x + 15 if col == 0 else card_x + 235
+                                row_y = card_y + 76 + row * 80
+                                
                                 cost = 0
                                 if skin_name == "classic": unlocked = True
                                 elif skin_name == "ninja":
@@ -1957,9 +2051,14 @@ class Game:
                                 elif skin_name == "skibidi":
                                     cost = 200
                                     unlocked = (skin_name in self.profile["unlocked_skins"]) or (self.high_score >= 25)
+                                elif skin_name == "mewing":
+                                    cost = 250
+                                    unlocked = (skin_name in self.profile["unlocked_skins"]) or (self.high_score >= 30)
+                                elif skin_name == "rizzler":
+                                    cost = 300
+                                    unlocked = (skin_name in self.profile["unlocked_skins"]) or (self.high_score >= 35)
                                 
-                                row_y = card_y + 70 + i * 62
-                                btn_rect = pygame.Rect(card_x + card_w - 95, row_y + 12, 80, 28)
+                                btn_rect = pygame.Rect(col_x + 120, row_y + 34, 78, 28)
                                 
                                 if unlocked:
                                     if skin_name != self.equipped_skin and btn_rect.collidepoint(vmx, vmy):
@@ -1972,7 +2071,7 @@ class Game:
                                         self.profile["unlocked_skins"].append(skin_name)
                                         
                                         # Check skin enthusiast
-                                        all_skins = ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]
+                                        all_skins = ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi", "mewing", "rizzler"]
                                         if all(s in self.profile.get("unlocked_skins", []) for s in all_skins):
                                             if "achievements" not in self.profile:
                                                 self.profile["achievements"] = {}
@@ -2003,7 +2102,7 @@ class Game:
                             return
                             
                         # 2. Profile Pill (edit profile)
-                        prof_btn = pygame.Rect(WIDTH // 2 - 90, 15, 180, 35)
+                        prof_btn = pygame.Rect(WIDTH // 2 - 90, 12, 180, 42)
                         if prof_btn.collidepoint(vmx, vmy):
                             self.login_input = self.username
                             self.state = "LOGIN"
@@ -2141,6 +2240,12 @@ class Game:
                     elif pu.type == 'slow':
                         self.slow_timer = 300  # 5 seconds at 60 FPS
                         self.score_popups.append({"x": int(pu.x), "y": int(pu.y - 15), "life": 40, "max_life": 40, "text": "SLOW-MO", "color": (120, 255, 120)})
+                    elif pu.type == 'magnet':
+                        self.magnet_timer = 300
+                        self.score_popups.append({"x": int(pu.x), "y": int(pu.y - 15), "life": 40, "max_life": 40, "text": "MAGNET", "color": (255, 215, 0)})
+                    elif pu.type == 'shrink':
+                        self.shrink_timer = 300
+                        self.score_popups.append({"x": int(pu.x), "y": int(pu.y - 15), "life": 40, "max_life": 40, "text": "SHRINK POTION", "color": (200, 100, 255)})
 
         # Check Coin Collections
         for coin in self.coins:
@@ -2344,8 +2449,17 @@ class Game:
             if self.first_flap:
                 if self.slow_timer > 0:
                     self.slow_timer -= 1
+                if self.magnet_timer > 0:
+                    self.magnet_timer -= 1
+                if self.shrink_timer > 0:
+                    self.shrink_timer -= 1
                 if self.immunity_timer > 0:
                     self.immunity_timer -= 1
+                    
+                if self.shrink_timer > 0:
+                    self.bird.radius = 8
+                else:
+                    self.bird.radius = 16
                     
                 self.bird.update(speed_multiplier, getattr(self, "is_windy", False))
                 
@@ -2368,6 +2482,12 @@ class Game:
                         self.particles.append(Particle(tx, ty, -2.4 * speed_multiplier, random.uniform(-0.4, 0.4) * speed_multiplier, fc, random.uniform(2.5, 4.5), 16))
                     elif self.equipped_skin == "skibidi":
                         self.particles.append(Particle(tx, ty, -2.0 * speed_multiplier, random.uniform(-0.5, 0.5) * speed_multiplier, (255, 255, 255, 210), random.uniform(3.5, 5.5), 14, shape='square'))
+                    elif self.equipped_skin == "mewing":
+                        fc = random.choice([(200, 200, 200, 180), (140, 140, 150, 150)])
+                        self.particles.append(Particle(tx, ty, -2.2 * speed_multiplier, random.uniform(-0.4, 0.4) * speed_multiplier, fc, random.uniform(3.0, 5.0), 18, shape='shh'))
+                    elif self.equipped_skin == "rizzler":
+                        fc = random.choice([(255, 30, 100, 210), (255, 120, 180, 180)])
+                        self.particles.append(Particle(tx, ty, -2.4 * speed_multiplier, random.uniform(-0.5, 0.5) * speed_multiplier, fc, random.uniform(3.5, 5.5), 16, shape='heart'))
                 
                 # Pipes updates
                 for pipe in self.pipes:
@@ -2381,6 +2501,14 @@ class Game:
                         
                 # Coins updates
                 for coin in self.coins[:]:
+                    if self.magnet_timer > 0:
+                        dx = self.bird.x - coin.x
+                        dy = self.bird.y - coin.y
+                        dist = math.sqrt(dx*dx + dy*dy)
+                        if dist < 220.0 and dist > 0:
+                            pull_speed = 6.0
+                            coin.x += (dx / dist) * pull_speed
+                            coin.y += (dy / dist) * pull_speed
                     coin.update(scroll_speed)
                     if coin.x + coin.radius * 2 < 0 or not coin.active:
                         self.coins.remove(coin)
@@ -2561,6 +2689,19 @@ class Game:
             pulse = int(math.sin(pygame.time.get_ticks() * 0.015) * 3)
             pygame.draw.circle(draw_surf, (0, 230, 255), (int(self.bird.x), int(self.bird.y)), self.bird.radius + 6 + pulse, 2)
             pygame.draw.circle(draw_surf, (0, 150, 255), (int(self.bird.x), int(self.bird.y)), self.bird.radius + 9 + pulse, 1)
+            
+        # Draw magnet gold ring if active
+        if self.magnet_timer > 0:
+            pulse = int(math.sin(pygame.time.get_ticks() * 0.02) * 4)
+            pygame.draw.circle(draw_surf, (255, 215, 0), (int(self.bird.x), int(self.bird.y)), self.bird.radius + 8 + pulse, 2)
+            pygame.draw.circle(draw_surf, (255, 255, 150), (int(self.bird.x), int(self.bird.y)), self.bird.radius + 11 + pulse, 1)
+            
+        # Draw shrink purple sparkles ring if active
+        if self.shrink_timer > 0:
+            pulse = int(math.sin(pygame.time.get_ticks() * 0.03) * 2)
+            pygame.draw.circle(draw_surf, (200, 100, 255), (int(self.bird.x), int(self.bird.y)), self.bird.radius + 5 + pulse, 1)
+            if pygame.time.get_ticks() % 5 == 0:
+                self.particles.append(Particle(self.bird.x - 5, self.bird.y, -1.5, random.uniform(-0.5, 0.5), (200, 100, 255, 180), random.uniform(1.5, 3.0), 12))
         
         # Draw floating score popups
         for popup in self.score_popups:
@@ -2784,15 +2925,20 @@ class Game:
         surface.blit(plus_lbl, (plus_btn_rect.centerx - plus_lbl.get_width() // 2, plus_btn_rect.centery - plus_lbl.get_height() // 2 - 1))
 
         # B. Profile Pill (top-center)
-        prof_pill = pygame.Rect(WIDTH // 2 - 90, 15, 180, 35)
+        prof_pill = pygame.Rect(WIDTH // 2 - 90, 12, 180, 42)
         pygame.draw.rect(surface, (30, 30, 45, 200), prof_pill, 0, 6)
         pygame.draw.rect(surface, theme_color, prof_pill, 1, 6)
         # Username text
         name_lbl = font_bold_small.render(self.username, True, (255, 255, 255))
+        # Title text (e.g. "Sigma Pilot" in gold)
+        title_str = self.get_pilot_title()
+        title_lbl = font_small.render(title_str, True, (255, 215, 0))
+        # Center username and title
+        surface.blit(name_lbl, (prof_pill.centerx - name_lbl.get_width() // 2, prof_pill.y + 4))
+        surface.blit(title_lbl, (prof_pill.centerx - title_lbl.get_width() // 2, prof_pill.y + 22))
         # Pencil edit icon (simple lines)
-        px, py = prof_pill.right - 25, 22
+        px, py = prof_pill.right - 22, prof_pill.centery - 5
         pygame.draw.polygon(surface, theme_color, [(px, py + 10), (px + 4, py + 10), (px + 10, py + 4), (px + 6, py)])
-        surface.blit(name_lbl, (prof_pill.x + 15, 22))
 
         # C. Speaker / Volume Button (top-right)
         vol_btn_rect = pygame.Rect(WIDTH - 55, 15, 40, 35)
@@ -3072,7 +3218,7 @@ class Game:
         surface.blit(c_lbl, (close_btn.centerx - c_lbl.get_width() // 2, close_btn.centery - c_lbl.get_height() // 2))
 
     def draw_skins_modal(self, surface):
-        card_w = 380
+        card_w = 460
         card_h = 490
         card_x = WIDTH // 2 - card_w // 2
         card_y = HEIGHT // 2 - card_h // 2 - 20
@@ -3089,15 +3235,18 @@ class Game:
         coins_txt = font_bold_small.render(f"Your Coins: {self.profile['coins']}", True, (255, 215, 0))
         surface.blit(coins_txt, (WIDTH // 2 - coins_txt.get_width() // 2, card_y + 44))
         
-        for i, skin_name in enumerate(["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]):
-            row_y = card_y + 70 + i * 62
+        for i, skin_name in enumerate(["classic", "ninja", "mech", "phoenix", "sigma", "skibidi", "mewing", "rizzler"]):
+            col = i % 2
+            row = i // 2
+            col_x = card_x + 15 if col == 0 else card_x + 235
+            row_y = card_y + 76 + row * 80
             
             # Row container
-            pygame.draw.rect(surface, (30, 30, 45), (card_x + 15, row_y, card_w - 30, 52), 0, 6)
+            pygame.draw.rect(surface, (30, 30, 45), (col_x, row_y, 210, 72), 0, 6)
             
             # Draw preview bird
-            bx = card_x + 40
-            by = row_y + 26
+            bx = col_x + 24
+            by = row_y + 36
             br = 12
             
             if skin_name == "classic":
@@ -3132,6 +3281,16 @@ class Game:
                 pygame.draw.circle(surface, (255, 200, 180), (bx + 2, by - 5), 7)
                 pygame.draw.circle(surface, (0, 0, 0), (bx + 4, by - 6), 1)
                 pygame.draw.polygon(surface, (255, 100, 0), [(bx + 8, by - 6), (bx + 12, by - 5), (bx + 8, by - 4)])
+            elif skin_name == "mewing":
+                pygame.draw.circle(surface, (120, 120, 130), (bx, by), br)
+                pygame.draw.polygon(surface, (120, 120, 130), [(bx - 8, by + 4), (bx + 4, by + 11), (bx + 9, by + 2), (bx, by)])
+                pygame.draw.line(surface, (20, 20, 20), (bx + 2, by - 4), (bx + 7, by - 4), 1)
+                pygame.draw.polygon(surface, (255, 160, 50), [(bx + 7, by - 2), (bx + 11, by), (bx + 7, by + 2)])
+            elif skin_name == "rizzler":
+                pygame.draw.circle(surface, (255, 20, 100), (bx, by), br)
+                pygame.draw.circle(surface, (255, 0, 0), (bx + 4, by - 4), 3)
+                pygame.draw.circle(surface, (255, 255, 255), (bx + 4, by - 4), 1)
+                pygame.draw.polygon(surface, (255, 180, 0), [(bx + 8, by - 2), (bx + 12, by), (bx + 8, by + 2)])
                 
             pygame.draw.circle(surface, (20, 20, 20), (bx, by), br, 1)
             
@@ -3141,11 +3300,13 @@ class Game:
                 "ninja": "Midnight Ninja", 
                 "mech": "Cyber-Mech", 
                 "phoenix": "Cosmic Phoenix",
-                "sigma": "Sigma Gigachad",
-                "skibidi": "Skibidi Toilet"
+                "sigma": "Sigma",
+                "skibidi": "Skibidi Toilet",
+                "mewing": "Mewing Master",
+                "rizzler": "Rizz God"
             }
             name_surf = font_bold_small.render(names[skin_name], True, (255, 255, 255))
-            surface.blit(name_surf, (card_x + 65, row_y + 10))
+            surface.blit(name_surf, (col_x + 48, row_y + 8))
             
             # Status / Unlock
             unlocked = False
@@ -3156,30 +3317,38 @@ class Game:
                 unlocked = True
             elif skin_name == "ninja":
                 high_score_met = self.high_score >= 5
-                req_txt = "Unlock: Score 5+"
+                req_txt = "Score 5+"
                 cost = 25
             elif skin_name == "mech":
                 high_score_met = self.high_score >= 12
-                req_txt = "Unlock: Score 12+"
+                req_txt = "Score 12+"
                 cost = 75
             elif skin_name == "phoenix":
                 high_score_met = self.high_score >= 20
-                req_txt = "Unlock: Score 20+"
+                req_txt = "Score 20+"
                 cost = 150
             elif skin_name == "sigma":
                 high_score_met = self.high_score >= 15
-                req_txt = "Unlock: Score 15+"
+                req_txt = "Score 15+"
                 cost = 100
             elif skin_name == "skibidi":
                 high_score_met = self.high_score >= 25
-                req_txt = "Unlock: Score 25+"
+                req_txt = "Score 25+"
                 cost = 200
+            elif skin_name == "mewing":
+                high_score_met = self.high_score >= 30
+                req_txt = "Score 30+"
+                cost = 250
+            elif skin_name == "rizzler":
+                high_score_met = self.high_score >= 35
+                req_txt = "Score 35+"
+                cost = 300
                 
             if high_score_met and skin_name not in self.profile["unlocked_skins"]:
                 self.profile["unlocked_skins"].append(skin_name)
                 
                 # Check skin enthusiast
-                all_skins = ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi"]
+                all_skins = ["classic", "ninja", "mech", "phoenix", "sigma", "skibidi", "mewing", "rizzler"]
                 if all(s in self.profile.get("unlocked_skins", []) for s in all_skins):
                     if "achievements" not in self.profile:
                         self.profile["achievements"] = {}
@@ -3188,22 +3357,21 @@ class Game:
                 save_profile_data(self.username, self.profile)
                 
             unlocked = skin_name in self.profile["unlocked_skins"]
-                
+            btn_rect = pygame.Rect(col_x + 120, row_y + 34, 78, 28)
+            
             if unlocked:
                 if skin_name == self.equipped_skin:
                     status_surf = font_bold_small.render("Equipped", True, (100, 210, 100))
-                    surface.blit(status_surf, (card_x + card_w - 95, row_y + 16))
+                    surface.blit(status_surf, (col_x + 125, row_y + 40))
                 else:
-                    eb_rect = pygame.Rect(card_x + card_w - 95, row_y + 12, 80, 28)
-                    pygame.draw.rect(surface, (100, 210, 100), eb_rect, 0, 6)
+                    pygame.draw.rect(surface, (100, 210, 100), btn_rect, 0, 6)
                     eb_lbl = font_small.render("Equip", True, (20, 20, 30))
-                    surface.blit(eb_lbl, (eb_rect.centerx - eb_lbl.get_width() // 2, eb_rect.centery - eb_lbl.get_height() // 2))
+                    surface.blit(eb_lbl, (btn_rect.centerx - eb_lbl.get_width() // 2, btn_rect.centery - eb_lbl.get_height() // 2))
             else:
                 req_surf = font_small.render(req_txt, True, (220, 90, 90))
-                surface.blit(req_surf, (card_x + 65, row_y + 30))
+                surface.blit(req_surf, (col_x + 48, row_y + 38))
                 
                 # Buy button
-                btn_rect = pygame.Rect(card_x + card_w - 95, row_y + 12, 80, 28)
                 if self.profile["coins"] >= cost:
                     pygame.draw.rect(surface, (46, 125, 50), btn_rect, 0, 6)
                     buy_lbl = font_small.render(f"Buy {cost}", True, (255, 255, 255))
@@ -3361,6 +3529,46 @@ class Game:
             self._hud_username = self.username
         surface.blit(self._hud_pilot_surf, (15, 15))
         
+        # Draw active power-up indicator badges
+        badge_y = 40
+        if self.shield_active:
+            # Blue shield pill
+            pygame.draw.rect(surface, (0, 100, 200, 200), (15, badge_y, 85, 20), 0, 4)
+            pygame.draw.rect(surface, (0, 200, 255), (15, badge_y, 85, 20), 1, 4)
+            lbl = font_small.render("SHIELD", True, (255, 255, 255))
+            surface.blit(lbl, (22, badge_y + 2))
+            badge_y += 24
+            
+        if self.slow_timer > 0:
+            # Green slow-mo pill with countdown bar
+            w = int(85 * (self.slow_timer / 300.0))
+            pygame.draw.rect(surface, (30, 35, 30, 200), (15, badge_y, 85, 20), 0, 4)
+            pygame.draw.rect(surface, (46, 125, 50), (15, badge_y, w, 20), 0, 4)
+            pygame.draw.rect(surface, (120, 255, 120), (15, badge_y, 85, 20), 1, 4)
+            lbl = font_small.render("SLOW-MO", True, (255, 255, 255))
+            surface.blit(lbl, (20, badge_y + 2))
+            badge_y += 24
+            
+        if self.magnet_timer > 0:
+            # Yellow/red magnet pill with countdown bar
+            w = int(85 * (self.magnet_timer / 300.0))
+            pygame.draw.rect(surface, (35, 30, 30, 200), (15, badge_y, 85, 20), 0, 4)
+            pygame.draw.rect(surface, (220, 40, 40), (15, badge_y, w, 20), 0, 4)
+            pygame.draw.rect(surface, (255, 215, 0), (15, badge_y, 85, 20), 1, 4)
+            lbl = font_small.render("MAGNET", True, (255, 255, 255))
+            surface.blit(lbl, (22, badge_y + 2))
+            badge_y += 24
+            
+        if self.shrink_timer > 0:
+            # Purple shrink pill with countdown bar
+            w = int(85 * (self.shrink_timer / 300.0))
+            pygame.draw.rect(surface, (35, 30, 35, 200), (15, badge_y, 85, 20), 0, 4)
+            pygame.draw.rect(surface, (140, 40, 200), (15, badge_y, w, 20), 0, 4)
+            pygame.draw.rect(surface, (200, 100, 255), (15, badge_y, 85, 20), 1, 4)
+            lbl = font_small.render("TINY BIRD", True, (255, 255, 255))
+            surface.blit(lbl, (19, badge_y + 2))
+            badge_y += 24
+        
         # Draw session coins display on top right
         coin_x = WIDTH - 80
         coin_y = 15
@@ -3490,7 +3698,7 @@ class Game:
             ("First Flight", "Play 1 round of Flapper Arcade", "first_flight"),
             ("Coin Collector", "Collect 100 lifetime coins", "coin_collector"),
             ("Insane Pilot", "Reach Insane difficulty (Score 25+)", "insane_pilot"),
-            ("Skin Enthusiast", "Unlock all 6 skins in the shop", "skin_enthusiast")
+            ("Skin Enthusiast", "Unlock all 8 skins in the shop", "skin_enthusiast")
         ]
         
         for idx, (name, desc, key) in enumerate(ach_list):

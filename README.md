@@ -20,13 +20,14 @@ A beautifully crafted Flappy Bird-style arcade game built entirely in Python wit
 ### 🎯 Gameplay Systems
 - **Difficulty Progression** — 4 tiers (Easy → Medium → Hard → Insane) with increasing speed and shrinking gaps
 - **Flying Obstacles** — Animated birds and bats that fly across the screen at higher difficulties
-- **Power-Ups** — Shield (absorbs one hit) and Slow-Mo (halves game speed for 5 seconds)
+- **Power-Ups** — Shield (absorbs one hit), Slow-Mo (halves game speed), **Coin Magnet** (attracts coins towards you), and **Shrink Potion** (shrinks bird size & collision hitbox by 50% for narrow gaps)
+- **Pilot Ranks** — Dynamic pilot titles (Recruit, Insane Flyer, Sigma Pilot, Skibidi Lord, Mewing Master, Rizz God) displayed in the profile header pill
 - **Coin Economy** — Collect coins mid-flight to unlock premium bird skins
 - **Daily Rewards** — Claim +50 coins every 24 hours via the dashboard
 - **Virtual Keyboard** — Fully mobile-friendly on-screen QWERTY layout for profile edits
 
 ### 🐦 Unlockable Skins
-- Classic, Ninja, Mech, Phoenix, **Sigma**, and **Skibidi Toilet** — each with unique particle trail effects and custom pixel art drawings
+- Classic, Ninja, Mech, Phoenix, Sigma, Skibidi Toilet, **Mewing Master** (squinting eyes & shush emoji trail), and **Rizz God** (glowing red laser eyes & red hearts trail) — each with unique particle trail shapes and custom pixel art drawings
 
 ### 🔊 Procedural Audio
 - All sounds synthesized from pure math — no external audio files needed
@@ -34,7 +35,7 @@ A beautifully crafted Flappy Bird-style arcade game built entirely in Python wit
 - Mode-specific ambient soundscapes (forest wind, synthwave beats, city traffic, winter gale)
 
 ### 📊 Progression
-- **Achievements Menu** — Unlock badges (First Flight, Coin Collector, Insane Pilot, Skin Enthusiast) and view progress in a gold modal
+- **Achievements Menu** — Unlock badges (First Flight, Coin Collector, Insane Pilot, Skin Enthusiast) and view progress in a gold modal. Requires all 8 skins to unlock the "Skin Enthusiast" badge!
 - Persistent player profiles with lifetime coin tracking
 - Local leaderboard with multiple player support
 - High score tracking per player
