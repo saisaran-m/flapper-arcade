@@ -2,9 +2,10 @@
 
 A beautifully crafted Flappy Bird-style arcade game built entirely in Python with Pygame. Features stunning hand-drawn pixel art, 4 unique game modes, dynamic weather, a day-night cycle, and procedurally generated sound effects.
 
-![Python](https://img.shields.io/badge/Python-3.8+-blue?logo=python&logoColor=white)
-![Pygame](https://img.shields.io/badge/Pygame-2.0+-green?logo=python&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+## 🎮 Play & Download
+
+[![Play Online in Browser](https://img.shields.io/badge/Play%20Online-Web%20Version-brightgreen?style=for-the-badge&logo=google-chrome&logoColor=white)](https://saisaran-m.github.io/flapper-arcade/)
+[![Download Android APK](https://img.shields.io/badge/Download-Android%20APK-blue?style=for-the-badge&logo=android&logoColor=white)](https://github.com/saisaran-m/flapper-arcade/releases/download/latest/app-debug.apk)
 
 ---
 
@@ -57,7 +58,7 @@ pip install pygame
 python generate_sounds.py
 
 # Run the game!
-python game.py
+python main.py
 ```
 
 ### Controls
@@ -73,7 +74,7 @@ python game.py
 
 ```
 forest-flapper-arcade/
-├── game.py              # Main game (all rendering, physics, UI)
+├── main.py              # Main game (all rendering, physics, UI)
 ├── generate_sounds.py   # Procedural sound synthesizer
 ├── assets/
 │   └── sounds/          # Generated WAV files (created by generate_sounds.py)
