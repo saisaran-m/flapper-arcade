@@ -1362,7 +1362,6 @@ class Game:
     def __init__(self):
         self.state = "START"  # START, PLAYING, GAMEOVER, LOGIN
         self.mode = "normal"  # normal, night, city, winter
-        self.last_click = None
         
         self.username = load_username()
         self.leaderboard = load_leaderboard()
@@ -1700,8 +1699,6 @@ class Game:
                             vmy = (my - cur_dy) / cur_scale
                         else:
                             vmx, vmy = mx, my
-                    
-                    self.last_click = (vmx, vmy, pygame.time.get_ticks())
                         
                     # Handle HUD click overrides first
                     if self.state == "START":
@@ -2308,13 +2305,7 @@ class Game:
                 flash_surf.set_alpha(180)
             draw_surf.blit(flash_surf, (0, 0))
             
-        # Draw debug click dot
-        if getattr(self, "last_click", None) is not None:
-            vx, vy, t = self.last_click
-            if pygame.time.get_ticks() - t < 2000: # show for 2 seconds
-                pygame.draw.circle(draw_surf, (255, 0, 0), (int(vx), int(vy)), 8)
-                pygame.draw.line(draw_surf, (255, 255, 255), (int(vx) - 15, int(vy)), (int(vx) + 15, int(vy)), 2)
-                pygame.draw.line(draw_surf, (255, 255, 255), (int(vx), int(vy) - 15), (int(vx), int(vy) + 15), 2)
+
             
         if sys.platform == "emscripten":
             screen.blit(draw_surf, (0, 0))
